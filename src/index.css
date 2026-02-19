@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Manrope", sans-serif;
+  --font-sans: "Inter", sans-serif;
+
+  --color-primary: #135bec;
+  --color-primary-foreground: #ffffff;
+
+  --color-background-light: #f6f6f8;
+  --color-background-dark: #101622;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+:root {
+  background-color: var(--color-background-light);
+  color: #1e293b;
+  color-scheme: light;
+}
+
+.dark {
+  background-color: var(--color-background-dark);
+  color: white;
+  color-scheme: dark;
+}
+
+@layer utilities {
+  .bg-overlay {
+    background: linear-gradient(to bottom, rgba(16, 22, 34, 0.7), rgba(16, 22, 34, 0.95));
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(19, 91, 236, 0.2);
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(19, 91, 236, 0.4);
+  }
+}
+
+@layer base {
+
+  input[type="text"],
+  input:not([type]),
+  textarea {
+    text-transform: uppercase;
+  }
+
+  ::placeholder {
+    text-transform: none;
+  }
+}
+
+/* Estilos para Impresión */
+@media print {
+
+  /* Ocultar elementos que no deben imprimirse */
+  .no-print,
+  nav,
+  aside,
+  header,
+  .sidebar,
+  .header-app {
+    display: none !important;
+  }
+
+  /* Asegurar que el reporte y sus padres sean visibles */
+  body,
+  html {
+    background: white !important;
+    color: black !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Si el reporte está presente, intentamos ocultar otros hijos directos del body/root */
+  #root> :not(:has(#printable-report)) {
+    display: none !important;
+  }
+
+  /* Ajustes específicos para el contenedor del reporte */
+  #printable-report {
+    visibility: visible !important;
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1cm !important;
+    /* Reducido para ganar espacio */
+    border: none !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  /* Forzar que todo el texto sea negro y visible */
+  #printable-report * {
+    visibility: visible !important;
+    color: black !important;
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    line-height: 1.15 !important;
+    /* Interlineado compacto */
+    font-size: 9.5pt !important;
+    /* Fuente base más pequeña */
+  }
+
+  /* Títulos un poco más grandes pero controlados */
+  #printable-report h1 {
+    font-size: 16pt !important;
+  }
+
+  #printable-report h2 {
+    font-size: 14pt !important;
+  }
+
+  #printable-report h3 {
+    font-size: 12pt !important;
+  }
+
+  #printable-report h4 {
+    font-size: 10pt !important;
+  }
+
+  /* Estilos específicos para tablas en impresión */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin-bottom: 0.5cm !important;
+  }
+
+  th,
+  td {
+    border: 1px solid #e2e8f0 !important;
+    color: black !important;
+    padding: 3px 6px !important;
+    /* Celdas muy compactas */
+  }
+
+  .bg-primary {
+    background-color: #135bec !important;
+    color: white !important;
+  }
+
+  .text-primary {
+    color: #135bec !important;
+  }
+}
