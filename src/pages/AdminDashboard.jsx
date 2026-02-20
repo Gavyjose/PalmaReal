@@ -3,6 +3,7 @@ import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
 import { formatCurrency } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
+import { sortUnits } from '../utils/unitSort';
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
@@ -28,10 +29,9 @@ const AdminDashboard = () => {
             const { data: unitsData, error: unitsError } = await supabase
                 .from('units')
                 .select('*, owners(full_name)')
-                .order('tower', { ascending: true })
-                .order('floor', { ascending: true })
-                .order('number', { ascending: true });
             if (unitsError) throw unitsError;
+
+            const sortedUnitsResult = sortUnits(unitsData || []);
 
             // 2. Cargar periodos publicados para calcular deuda
             const { data: periodsData, error: periodsError } = await supabase
@@ -53,7 +53,7 @@ const AdminDashboard = () => {
             let debtorCount = 0;
 
             // Mapear unidades con su estado (solvente/deudor)
-            const processedUnits = unitsData.map(unit => {
+            const processedUnits = sortedUnitsResult.map(unit => {
                 const unitPeriods = (periodsData || []).filter(p => p.tower_id === unit.tower);
 
                 // Calculate total aliquot for each period (Sum of expenses + reserve fund)

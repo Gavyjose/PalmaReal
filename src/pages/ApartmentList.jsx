@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
+import { sortUnits } from '../utils/unitSort';
 
 const ApartmentList = () => {
     const [units, setUnits] = useState([]);
@@ -50,12 +51,8 @@ const ApartmentList = () => {
                     *,
                     owners (full_name)
                 `)
-                .order('tower', { ascending: true })
-                .order('floor', { ascending: true })
-                .order('number', { ascending: true });
-
             if (error) throw error;
-            setUnits(data || []);
+            setUnits(sortUnits(data || []));
         } catch (error) {
             console.error('Error fetching units:', error);
         } finally {

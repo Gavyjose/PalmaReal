@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
 import { formatNumber } from '../utils/formatters';
+import { sortUnits } from '../utils/unitSort';
 
 const SpecialQuotas = () => {
     const { activeTowers } = useTowers();
@@ -43,10 +44,7 @@ const SpecialQuotas = () => {
                     owners!inner (full_name)
                 `)
                 .eq('tower', selectedTower)
-                .order('floor', { ascending: true })
-                .order('number', { ascending: true });
-
-            setUnits(unitsData || []);
+            setUnits(sortUnits(unitsData || []));
 
             // Fetch the current active project for the selected tower
             const { data: projData } = await supabase

@@ -149,7 +149,6 @@ const UnitDetail = () => {
                 const history = [];
 
                 // --- INTEGRACIÓN DE DEUDA HISTÓRICA ---
-                // Si la unidad tiene deuda previa al sistema, la agregamos al inicio
                 const initialDebt = parseFloat(initialDebtValue || 0);
                 if (initialDebt > 0) {
                     accumulatedDebt = initialDebt;
@@ -160,22 +159,27 @@ const UnitDetail = () => {
                         aliquot: initialDebt,
                         paid_amount: 0,
                         status: 'DEUDA',
-                        type: 'HISTORY'
+                        type: 'HISTORY',
+                        sortKey: 0 // Deuda histórica va después de especiales (que tienen prioridad)
                     });
                 }
 
                 sortedPeriods.forEach((period, index) => {
+                    const parts = period.period_name.split(' ');
+                    const year = parseInt(parts[1]) || 0;
+                    const month = monthMap[parts[0].toUpperCase()] || 0;
+                    const periodSortKey = year * 100 + month;
+
                     const totalExpenses = parseFloat(period.period_expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0).toFixed(2));
                     const finalTotal = parseFloat((totalExpenses + parseFloat(period.reserve_fund || 0)).toFixed(2));
-                    const aliquot = parseFloat((finalTotal / 16).toFixed(2)); // UNIDADES FIJAS POR TORRE
+                    const aliquot = parseFloat((finalTotal / 16).toFixed(2));
 
                     // Check payments
                     const paidAmount = paymentsMap[period.id] || 0;
-                    const isPaid = paidAmount >= aliquot - 0.05; // 0.05 margin for rounding errors
+                    const isPaid = paidAmount >= aliquot - 0.05;
 
                     const status = isPaid ? 'PAGADO' : 'DEUDA';
 
-                    // Acumulamos deuda total SOLO si no está pagado
                     if (!isPaid) {
                         accumulatedDebt = parseFloat((accumulatedDebt + (aliquot - paidAmount)).toFixed(2));
                     }
@@ -187,7 +191,8 @@ const UnitDetail = () => {
                         aliquot: aliquot,
                         paid_amount: paidAmount,
                         status: status,
-                        type: 'CONDO'
+                        type: 'CONDO',
+                        sortKey: periodSortKey
                     });
 
                     if (index === 0) {
@@ -235,28 +240,65 @@ const UnitDetail = () => {
                 }
                 // --- FIN INTEGRACIÓN CUOTAS ESPECIALES ---
 
-                // 4. Fetch Last Payment (Outside loop)
-                const { data: lastPaymentData, error: lastPaymentError } = await supabase
+                // 4. Fetch All Payments for History
+                const { data: paymentsHistory, error: paymentsError } = await supabase
                     .from('unit_payments')
-                    .select('amount_usd, payment_date')
+                    .select('*')
                     .eq('unit_id', unitId)
-                    .order('payment_date', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                    .order('payment_date', { ascending: false });
 
-                if (lastPaymentError) console.error('Error fetching last payment:', lastPaymentError);
+                if (paymentsError) console.error('Error fetching payments history:', paymentsError);
 
                 setFinancials({
                     latestAliquot,
                     totalBalance: accumulatedDebt,
                     latestPeriodName,
-                    lastPayment: lastPaymentData ? lastPaymentData.amount_usd : 0,
-                    lastPaymentDate: lastPaymentData ? lastPaymentData.payment_date : null,
-                    history
+                    lastPayment: paymentsHistory && paymentsHistory.length > 0 ? paymentsHistory[0].amount_usd : 0,
+                    lastPaymentDate: paymentsHistory && paymentsHistory.length > 0 ? paymentsHistory[0].payment_date : null,
+                    history,
+                    payments: paymentsHistory || []
                 });
             }
         } catch (error) {
             console.error('Error fetching financial data:', error);
+        }
+    };
+
+    const handleDeletePayment = async (paymentId) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este pago? Esta acción no se puede deshacer y el saldo de la unidad se actualizará.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+
+            // 1. Eliminar asignaciones manuales para evitar errores de FK
+            await supabase
+                .from('unit_payment_allocations')
+                .delete()
+                .eq('payment_id', paymentId);
+
+            // 2. Eliminar vínculos con cuotas especiales (proyectos)
+            await supabase
+                .from('special_quota_payments')
+                .delete()
+                .eq('unit_payment_id', paymentId);
+
+            // 3. Eliminar el pago principal
+            const { error: deleteError } = await supabase
+                .from('unit_payments')
+                .delete()
+                .eq('id', paymentId);
+
+            if (deleteError) throw deleteError;
+
+            alert('✅ Pago eliminado exitosamente.');
+            await fetchUnitDetails(); // Refrescar todo
+        } catch (error) {
+            console.error('Error deleting payment:', error);
+            alert('Error al eliminar el pago: ' + error.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -439,7 +481,12 @@ const UnitDetail = () => {
                                             <tr key={record.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                 <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200 uppercase">{record.period_name}</td>
                                                 <td className="px-6 py-4 text-right text-slate-500">$ {formatCurrency(record.total_expenses)}</td>
-                                                <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">$ {formatCurrency(record.aliquot)}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <p className="font-black text-slate-900 dark:text-white">$ {formatCurrency(record.aliquot)}</p>
+                                                    {record.paid_amount > 0 && record.paid_amount < record.aliquot - 0.05 && (
+                                                        <p className="text-[10px] text-green-600 font-bold uppercase">Abonado: $ {formatCurrency(record.paid_amount)}</p>
+                                                    )}
+                                                </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${record.status === 'PAGADO'
                                                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30'
@@ -462,6 +509,59 @@ const UnitDetail = () => {
                                     ) : (
                                         <tr>
                                             <td colSpan="5" className="px-6 py-10 text-center text-slate-400 italic">No hay registros financieros publicados para esta torre.</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Payment History Table (Actual Payments) */}
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-xs">Historial de Pagos Registrados</h3>
+                            <span className="text-xs font-bold text-slate-500">{financials.payments?.length || 0} Pagos</span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-50 dark:bg-slate-800">
+                                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-200 dark:border-slate-700">
+                                        <th className="px-6 py-4">Fecha</th>
+                                        <th className="px-6 py-4">Referencia</th>
+                                        <th className="px-6 py-4 text-right">Monto USD/Bs</th>
+                                        <th className="px-6 py-4 text-center">Tasa</th>
+                                        <th className="px-6 py-4 text-right">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                                    {financials.payments?.length > 0 ? (
+                                        financials.payments.map((p) => (
+                                            <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">
+                                                    {new Date(p.payment_date).toLocaleDateString('es-VE', { timeZone: 'UTC' })}
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-500 uppercase font-medium">{p.reference}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <p className="font-extrabold text-slate-900 dark:text-white">$ {formatCurrency(p.amount_usd)}</p>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Bs {formatCurrency(p.amount_bs)}</p>
+                                                </td>
+                                                <td className="px-6 py-4 text-center text-xs font-bold text-slate-500">
+                                                    {p.bcv_rate ? `Bs ${formatCurrency(p.bcv_rate)}` : '--'}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleDeletePayment(p.id)}
+                                                        className="text-red-400 hover:text-red-600 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 cursor-pointer"
+                                                        title="Eliminar Pago"
+                                                    >
+                                                        <span className="material-icons text-sm">delete</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-10 text-center text-slate-400 italic">No hay pagos registrados para esta unidad.</td>
                                         </tr>
                                     )}
                                 </tbody>
