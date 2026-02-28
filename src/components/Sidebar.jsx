@@ -7,6 +7,8 @@ const sidebarLinks = [
     { icon: 'apartment', label: 'Apartamentos', to: '/admin/apartamentos' },
     { icon: 'payments', label: 'Pagos y Recibos', to: '/admin/pagos' },
     { icon: 'account_balance', label: 'Estado de Cuenta', to: '/admin/estado-de-cuenta' },
+    { icon: 'receipt_long', label: 'Libro de Cobranzas', to: '/admin/cobranzas' },
+    { icon: 'account_balance_wallet', label: 'Libro de Caja', to: '/admin/libro-caja' },
     { icon: 'assessment', label: 'Reportes', to: '/admin/reportes' },
     { icon: 'campaign', label: 'Comunicados', to: '/admin/comunicados' },
     { icon: 'how_to_vote', label: 'Asambleas', to: '/admin/asambleas' },
@@ -38,11 +40,11 @@ const Sidebar = () => {
     };
 
     return (
-        <aside className={`${isCollapsed ? 'w-20' : 'w-64'} border-r border-primary/10 bg-white dark:bg-slate-900/50 hidden lg:flex flex-col sticky top-0 h-screen z-20 transition-all duration-300 ease-in-out`}>
-            <div className="p-6 flex items-center justify-between gap-3">
+        <aside className={`${isCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hidden lg:flex flex-col sticky top-0 h-screen z-20 transition-all duration-300 ease-in-out`}>
+            <div className="p-6 flex items-center justify-between gap-3 border-b border-transparent">
                 <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-10 h-10 min-w-[40px] bg-primary rounded-lg flex items-center justify-center text-white">
-                        <span className="material-icons">domain</span>
+                    <div className="w-8 h-8 min-w-[32px] bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900">
+                        <span className="material-icons text-sm">account_balance_wallet</span>
                     </div>
                     {!isCollapsed && (
                         <h1 className="font-bold text-lg tracking-tight leading-tight text-slate-800 dark:text-white whitespace-nowrap animate-in fade-in slide-in-from-left-2">
@@ -66,9 +68,9 @@ const Sidebar = () => {
                         end={link.end}
                         title={isCollapsed ? link.label : ""}
                         className={({ isActive }) =>
-                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-all group ${isActive
-                                ? 'bg-primary/10 text-primary font-semibold'
-                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            `flex items-center gap-3 px-4 py-2 text-sm transition-all group ${isActive
+                                ? 'bg-slate-100 text-slate-900 font-bold border-l-4 border-slate-900 dark:bg-slate-800 dark:text-white dark:border-white'
+                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 border-l-4 border-transparent'
                             }`
                         }
                     >
@@ -95,10 +97,10 @@ const Sidebar = () => {
                     )}
                     <button
                         onClick={handleLogout}
-                        className={`p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors cursor-pointer ${isCollapsed ? 'mx-auto' : ''}`}
+                        className={`p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 dark:hover:text-white dark:hover:bg-slate-800 transition-colors cursor-pointer ${isCollapsed ? 'mx-auto' : ''}`}
                         title="Cerrar Sesión"
                     >
-                        <span className="material-icons">logout</span>
+                        <span className="material-icons text-sm">logout</span>
                     </button>
                 </div>
             </div>

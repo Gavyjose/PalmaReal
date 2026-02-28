@@ -4,9 +4,12 @@ import { useTowers } from '../hooks/useTowers';
 import { formatCurrency } from '../utils/formatters';
 
 const Reports = () => {
-    const [month, setMonth] = useState('FEBRERO');
-    const [year, setYear] = useState('2026');
-    const [selectedTower, setSelectedTower] = useState('Todas las Torres');
+    const { activeTowers, loading: towersLoading, lastSelectedTower, setLastSelectedTower } = useTowers();
+    const systemMonth = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"][new Date().getMonth()];
+    const systemYear = String(new Date().getFullYear());
+    const [month, setMonth] = useState(systemMonth);
+    const [year, setYear] = useState(systemYear);
+    const [selectedTower, setSelectedTower] = useState(lastSelectedTower || 'Todas las Torres');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         income: 0,
@@ -25,7 +28,6 @@ const Reports = () => {
     ];
 
     const years = ['2025', '2026', '2027'];
-    const { activeTowers, loading: towersLoading } = useTowers();
     const towers = useMemo(() => ['Todas las Torres', ...activeTowers.map(t => t.name)], [activeTowers]);
 
     const fetchData = async () => {
@@ -206,7 +208,10 @@ const Reports = () => {
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                         <select
                             value={selectedTower}
-                            onChange={(e) => setSelectedTower(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedTower(e.target.value);
+                                setLastSelectedTower(e.target.value);
+                            }}
                             className="bg-transparent border-none text-[10px] font-black focus:ring-0 py-1 pl-3 pr-8 cursor-pointer text-slate-800 dark:text-slate-100 outline-none uppercase tracking-widest"
                         >
                             {towers.map(t => <option key={t} value={t}>{t}</option>)}

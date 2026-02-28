@@ -8,68 +8,54 @@ import { formatCurrency, formatNumber } from '../utils/formatters';
 
 const AliquotsConfig = () => {
     const [selectedTower, setSelectedTower] = useState('');
-    const { activeTowers, loading: towersLoading } = useTowers();
-    const [period, setPeriod] = useState('FEBRERO 2026');
+    const aliquotsMonthNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
+    const currentAliquotsPeriod = `${aliquotsMonthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+    const [period, setPeriod] = useState(currentAliquotsPeriod);
+    const { activeTowers, loading: towersLoading, lastSelectedTower, setLastSelectedTower } = useTowers();
 
     // Set initial tower when towers load
     useEffect(() => {
         if (activeTowers.length > 0 && !selectedTower) {
-            setSelectedTower(activeTowers[0].name);
+            const defaultTower = activeTowers.find(t => t.name === lastSelectedTower)?.name || activeTowers[0].name;
+            setSelectedTower(defaultTower);
+            if (!lastSelectedTower) setLastSelectedTower(defaultTower);
         }
     }, [activeTowers]);
-    const [expenses, setExpenses] = useState([
-        { id: 1, description: 'Mantenimiento y Áreas Comunes', amount: 4500 },
-        { id: 2, description: 'Seguridad Privada 24/7', amount: 3200 },
-        { id: 3, description: 'Electricidad y Agua Común', amount: 1850 },
-        { id: 4, description: 'Administración', amount: 1200 }
-    ]);
-    const [bcvRate, setBcvRate] = useState(36.50); // Valor por defecto
-    const [loadingRate, setLoadingRate] = useState(false);
-    const [selectedRateDate, setSelectedRateDate] = useState(new Date().toISOString().split('T')[0]);
-    const [actualRateDate, setActualRateDate] = useState(null);
-    const [reserveFundAmount, setReserveFundAmount] = useState(0); // Monto fijo solicitado por el usuario
+    const [expenses, setExpenses] = useState([]);
+    const [commonExpenses, setCommonExpenses] = useState([]);
+    const [newExpenseDesc, setNewExpenseDesc] = useState('');
+    const [newExpenseAmount, setNewExpenseAmount] = useState('');
+    const [reserveFundAmount, setReserveFundAmount] = useState(0);
     const [loadingData, setLoadingData] = useState(false);
     const [saving, setSaving] = useState(false);
     const [currentPeriodId, setCurrentPeriodId] = useState(null);
-    const [periodStatus, setPeriodStatus] = useState('BORRADOR'); // 'BORRADOR' o 'PUBLICADO'
+    const [periodStatus, setPeriodStatus] = useState('BORRADOR');
     const [showPrintPreview, setShowPrintPreview] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedExpense, setSelectedExpense] = useState(null);
 
-    // Cargar tasa BCV (Soporte para fallback en fines de semana/feriados)
-    const fetchBCVRate = async (date = null) => {
-        try {
-            setLoadingRate(true);
-            let query = supabase
-                .from('exchange_rates')
-                .select('rate_value, rate_date')
-                .order('rate_date', { ascending: false });
 
-            if (date) {
-                // Buscamos la tasa menor o igual a la fecha seleccionada
-                query = query.lte('rate_date', date);
-            }
 
-            const { data, error } = await query.limit(1).maybeSingle();
-
-            if (error) {
-                console.error('Error fetching BCV rate:', error);
-            } else if (data) {
-                setBcvRate(parseFloat(parseFloat(data.rate_value).toFixed(2)));
-                setActualRateDate(data.rate_date);
-                if (date && data.rate_date !== date) {
-                    console.log(`Usando tasa de fallback del día ${data.rate_date} para la consulta del ${date}`);
+    // Cargar sugerencias de descripciones únicas de la base de datos
+    useEffect(() => {
+        const fetchCommonExpenses = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('period_expenses')
+                    .select('description')
+                    .order('sort_order', { ascending: true })
+                    .order('created_at', { ascending: true });
+                if (error) throw error;
+                if (data) {
+                    const uniqueDesc = [...new Set(data.map(e => e.description))].filter(Boolean);
+                    setCommonExpenses(uniqueDesc);
                 }
-            } else {
-                setActualRateDate(null);
-                console.warn('No se encontró ninguna tasa disponible en el sistema');
+            } catch (error) {
+                console.error('Error fetching common expenses:', error);
             }
-        } catch (err) {
-            console.error('Fetch rate error:', err);
-        } finally {
-            setLoadingRate(false);
-        }
-    };
+        };
+        fetchCommonExpenses();
+    }, []);
 
     // Cargar datos del periodo y sus gastos
     const fetchPeriodData = async () => {
@@ -86,17 +72,19 @@ const AliquotsConfig = () => {
 
             if (periodData) {
                 setCurrentPeriodId(periodData.id);
-                setBcvRate(parseFloat(periodData.bcv_rate));
                 setReserveFundAmount(parseFloat(periodData.reserve_fund));
                 setPeriodStatus(periodData.status || 'BORRADOR');
 
                 const { data: expensesData, error: expError } = await supabase
                     .from('period_expenses')
                     .select('*')
-                    .eq('period_id', periodData.id);
+                    .eq('period_id', periodData.id)
+                    .order('sort_order', { ascending: true })
+                    .order('created_at', { ascending: true });
 
                 if (expError) throw expError;
-                setExpenses(expensesData.map(e => ({
+
+                let expensesList = expensesData.map(e => ({
                     id: e.id,
                     description: e.description,
                     amount: e.amount,
@@ -105,14 +93,69 @@ const AliquotsConfig = () => {
                     payment_date: e.payment_date,
                     amount_bs: e.amount_bs,
                     bcv_rate_at_payment: e.bcv_rate_at_payment,
-                    amount_usd_at_payment: e.amount_usd_at_payment
-                })));
+                    amount_usd_at_payment: e.amount_usd_at_payment,
+                    sort_order: e.sort_order,
+                    is_bank_commission: e.is_bank_commission || false
+                }));
+
+                // Agregar comisión bancaria automática si existe valor guardado
+                const bankCommissionsBs = parseFloat(periodData.bank_commissions_total_bs) || 0;
+
+                if (bankCommissionsBs > 0) {
+                    // Parsear periodo para obtener mes y año
+                    const periodParts = period.toUpperCase().split(' ');
+                    const monthName = periodParts[0];
+                    const year = periodParts[1] || new Date().getFullYear().toString();
+                    const monthIndex = aliquotsMonthNames.indexOf(monthName);
+                    const month = (monthIndex + 1).toString().padStart(2, '0');
+                    const firstDay = `${year}-${month}-01`;
+
+                    // Obtener tasa BCV del primer día del mes
+                    const { data: bcvRate } = await supabase
+                        .from('exchange_rates')
+                        .select('rate_value')
+                        .lte('rate_date', firstDay)
+                        .order('rate_date', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                    const rate = bcvRate?.rate_value || 1;
+                    const commissionUsd = parseFloat((bankCommissionsBs / rate).toFixed(2));
+
+                    // Buscar si ya existe el concepto de COMISION BANCARIA / BANCAREA
+                    const existingCommIndex = expensesList.findIndex(e =>
+                        e.is_bank_commission ||
+                        e.description.includes('COMISION') && e.description.includes('BANC')
+                    );
+
+                    const commissionExpense = {
+                        id: existingCommIndex >= 0 ? expensesList[existingCommIndex].id : 'bank-commission-auto',
+                        description: 'COMISIÓN BANCARIA',
+                        amount: existingCommIndex >= 0 ? expensesList[existingCommIndex].amount : commissionUsd,
+                        amount_bs: bankCommissionsBs,
+                        amount_usd_at_payment: commissionUsd,
+                        bcv_rate_at_payment: rate,
+                        payment_status: 'PAGADO',
+                        payment_date: firstDay,
+                        bank_reference: 'SISTEMA BANCARIO',
+                        is_bank_commission: true,
+                        sort_order: existingCommIndex >= 0 ? expensesList[existingCommIndex].sort_order : expensesList.length
+                    };
+
+                    if (existingCommIndex >= 0) {
+                        expensesList[existingCommIndex] = commissionExpense;
+                    } else {
+                        expensesList.push(commissionExpense);
+                    }
+                }
+
+                setExpenses(expensesList);
+                // El cierre del try catch original sigue intacto
             } else {
                 setCurrentPeriodId(null);
                 setExpenses([]);
                 setReserveFundAmount(0);
                 setPeriodStatus('BORRADOR');
-                fetchBCVRate(selectedRateDate);
             }
         } catch (error) {
             console.error('Error loading period data:', error);
@@ -126,12 +169,21 @@ const AliquotsConfig = () => {
             setSaving(true);
             let periodId = currentPeriodId;
 
+            const totalExp = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+            const resFund = parseFloat(parseFloat(reserveFundAmount || 0).toFixed(2));
+            const finTotal = parseFloat((totalExp + resFund).toFixed(2));
+            const aliPerUnit = parseFloat((finTotal / 16).toFixed(2));
+
             const periodToSave = {
                 tower_id: selectedTower,
                 period_name: period.toUpperCase(),
                 reserve_fund: reserveFundAmount,
-                bcv_rate: bcvRate,
+                bcv_rate: 1, // Defaulting to 1 as we only use USD here
                 status: periodStatus.toUpperCase(),
+                total_expenses_usd: totalExp,
+                reserve_fund_usd: resFund,
+                total_to_distribute_usd: finTotal,
+                unit_aliquot_usd: aliPerUnit,
                 updated_at: new Date().toISOString()
             };
 
@@ -142,7 +194,6 @@ const AliquotsConfig = () => {
                     .eq('id', periodId);
                 if (error) throw error;
             } else {
-                // Usar upsert con onConflict para evitar duplicados si el ID es nulo
                 const { data, error } = await supabase
                     .from('condo_periods')
                     .upsert(periodToSave, { onConflict: ['tower_id', 'period_name'] })
@@ -156,7 +207,7 @@ const AliquotsConfig = () => {
             await supabase.from('period_expenses').delete().eq('period_id', periodId);
 
             if (expenses.length > 0) {
-                const expensesToSave = expenses.map(exp => ({
+                const expensesToSave = expenses.map((exp, index) => ({
                     period_id: periodId,
                     description: exp.description,
                     amount: parseFloat(exp.amount),
@@ -166,7 +217,9 @@ const AliquotsConfig = () => {
                     payment_date: exp.payment_date || null,
                     amount_bs: exp.amount_bs || null,
                     bcv_rate_at_payment: exp.bcv_rate_at_payment || null,
-                    amount_usd_at_payment: exp.amount_usd_at_payment || null
+                    amount_usd_at_payment: exp.amount_usd_at_payment || null,
+                    sort_order: index,
+                    is_bank_commission: exp.is_bank_commission || false
                 }));
                 const { error: insError } = await supabase.from('period_expenses').insert(expensesToSave);
                 if (insError) throw insError;
@@ -186,10 +239,26 @@ const AliquotsConfig = () => {
         fetchPeriodData();
     }, [selectedTower, period]);
 
-    const totalExpenses = useMemo(() => {
-        const total = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
-        return parseFloat(total.toFixed(2));
+    const expensesTotals = useMemo(() => {
+        const base = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+        const paidBs = expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount_bs) || 0), 0);
+        const equivUsd = expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount_usd_at_payment) || 0), 0);
+        const diffUsd = expenses.reduce((sum, exp) => {
+            if (exp.payment_status === 'PAGADO') {
+                return sum + (parseFloat(exp.amount || 0) - parseFloat(exp.amount_usd_at_payment || 0));
+            }
+            return sum;
+        }, 0);
+
+        return {
+            base: parseFloat(base.toFixed(2)),
+            paidBs: parseFloat(paidBs.toFixed(2)),
+            equivUsd: parseFloat(equivUsd.toFixed(2)),
+            diffUsd: parseFloat(diffUsd.toFixed(2))
+        };
     }, [expenses]);
+
+    const totalExpenses = expensesTotals.base;
 
     const reserveFund = parseFloat(parseFloat(reserveFundAmount || 0).toFixed(2));
     const finalTotal = parseFloat((totalExpenses + reserveFund).toFixed(2));
@@ -198,9 +267,20 @@ const AliquotsConfig = () => {
     const isPublished = periodStatus === 'PUBLICADO';
 
     const handleAddExpense = () => {
-        if (isPublished) return;
+        if (isPublished || !newExpenseDesc || !newExpenseAmount) return;
         const newId = crypto.randomUUID();
-        setExpenses([...expenses, { id: newId, description: '', amount: 0 }]);
+        setExpenses([
+            ...expenses,
+            {
+                id: newId,
+                description: newExpenseDesc.toUpperCase(),
+                amount: parseFloat(newExpenseAmount),
+                payment_status: 'PENDIENTE',
+                sort_order: expenses.length
+            }
+        ]);
+        setNewExpenseDesc('');
+        setNewExpenseAmount('');
     };
 
     const handleUpdateExpense = (id, field, value) => {
@@ -259,12 +339,21 @@ const AliquotsConfig = () => {
             setSaving(true);
             if (isClosing) {
                 let periodId = currentPeriodId;
+                const totalExp = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
+                const resFund = parseFloat(parseFloat(reserveFundAmount || 0).toFixed(2));
+                const finTotal = parseFloat((totalExp + resFund).toFixed(2));
+                const aliPerUnit = parseFloat((finTotal / 16).toFixed(2));
+
                 const periodToSave = {
                     tower_id: selectedTower,
-                    period_name: period,
+                    period_name: period.toUpperCase(),
                     reserve_fund: reserveFundAmount,
-                    bcv_rate: bcvRate,
+                    bcv_rate: 1,
                     status: newStatus,
+                    total_expenses_usd: totalExp,
+                    reserve_fund_usd: resFund,
+                    total_to_distribute_usd: finTotal,
+                    unit_aliquot_usd: aliPerUnit,
                     updated_at: new Date().toISOString()
                 };
 
@@ -322,274 +411,311 @@ const AliquotsConfig = () => {
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <nav className="flex text-sm text-slate-500 mb-2 gap-2 items-center">
-                        <span>Finanzas</span>
-                        <span className="material-icons text-[16px]">chevron_right</span>
-                        <span className="text-primary font-medium">Configuración de Alícuotas</span>
+                    <nav className="flex text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 mb-2 gap-2 items-center">
+                        <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">Finanzas</span>
+                        <span>/</span>
+                        <span className="text-slate-900 dark:text-white">Alícuotas</span>
                     </nav>
-                    <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">Alícuotas - Torre {selectedTower}</h2>
-                    <p className="text-slate-500 text-sm mt-1">{BUILDING_CONFIG.fullName}</p>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Parametrización - Torre {selectedTower}</h2>
+                    <p className="text-slate-500 text-sm mt-1 font-mono">{BUILDING_CONFIG.fullName}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${isPublished ? 'bg-green-100 text-green-700 border-green-200' : 'bg-amber-100 text-amber-700 border-amber-200'
+                    <div className={`px-3 py-1.5 rounded-none text-[10px] font-black uppercase tracking-widest border ${isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-700' : 'bg-amber-50 text-amber-700 border-amber-700'
                         }`}>
                         {periodStatus}
                     </div>
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2 flex items-center gap-3">
-                        <span className="material-icons text-primary text-sm">apartment</span>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none px-4 py-2 flex items-center gap-3">
+                        <span className="material-icons text-slate-500 text-sm">apartment</span>
                         <select
                             value={selectedTower}
-                            onChange={(e) => setSelectedTower(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedTower(e.target.value);
+                                setLastSelectedTower(e.target.value);
+                            }}
                             disabled={loadingData || saving}
-                            className="bg-transparent border-none focus:ring-0 text-sm font-black p-0 pr-8 text-slate-900 dark:text-white outline-none cursor-pointer disabled:opacity-50"
+                            className="bg-transparent border-none focus:ring-0 text-xs font-mono font-bold p-0 pr-8 text-slate-900 dark:text-white outline-none cursor-pointer disabled:opacity-50 uppercase tracking-widest"
                         >
                             {activeTowers.map(t => (
-                                <option key={t.name} value={t.name}>Torre {t.name}</option>
+                                <option key={t.name} value={t.name}>TORRE {t.name}</option>
                             ))}
                         </select>
                     </div>
-                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2 flex items-center gap-3">
-                        <span className="material-icons text-primary text-sm">calendar_month</span>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none px-4 py-2 flex items-center gap-3">
+                        <span className="material-icons text-slate-500 text-sm">calendar_month</span>
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
                             disabled={loadingData || saving}
-                            className="bg-transparent border-none focus:ring-0 text-sm font-black p-0 pr-8 text-slate-900 dark:text-white outline-none cursor-pointer disabled:opacity-50"
+                            className="bg-transparent border-none focus:ring-0 text-xs font-mono font-bold p-0 pr-8 text-slate-900 dark:text-white outline-none cursor-pointer disabled:opacity-50 uppercase tracking-widest"
                         >
                             <option>DICIEMBRE 2025</option>
                             <option>ENERO 2026</option>
-                            <option selected>FEBRERO 2026</option>
+                            <option>FEBRERO 2026</option>
                             <option>MARZO 2026</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Summary & Expenses */}
-                <div className="lg:col-span-12 xl:col-span-4 space-y-6">
-                    <div className="bg-primary rounded-xl p-6 text-white shadow-xl shadow-primary/20 relative overflow-hidden">
-                        <div className="relative z-10">
-                            <p className="text-white/80 text-sm font-medium mb-1">Total Gastos Torre {selectedTower}</p>
-                            <h3 className="text-4xl font-black mb-4">$ {formatCurrency(finalTotal)}</h3>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2 bg-white/20 w-fit px-3 py-1 rounded-full text-xs font-bold uppercase">
+            <div className="grid grid-cols-1 gap-8">
+                {/* Main Content Area */}
+                <div className="space-y-6">
+                    <div className="bg-slate-900 dark:bg-slate-800 rounded-none p-6 text-white border-b-4 border-slate-500 relative overflow-hidden">
+                        <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div>
+                                <p className="text-slate-400 font-mono text-[10px] font-bold uppercase tracking-widest mb-1">Presupuesto Ejecutable T-{selectedTower}</p>
+                                <h3 className="text-4xl font-mono font-black">$ {formatCurrency(finalTotal)}</h3>
+                            </div>
+                            <div className="flex items-center">
+                                <div className="flex items-center gap-2 border border-slate-700 bg-slate-800/50 w-fit px-3 py-1 rounded-none text-xs font-mono font-bold uppercase tracking-widest text-slate-300">
                                     <span className="material-icons text-[14px]">payments</span>
-                                    Alícuota: $ {formatCurrency(aliquotPerUnit)} / APTOS
+                                    Cuota: $ {formatCurrency(aliquotPerUnit)} / Fracción
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-end">
+                                <div className="text-right">
+                                    <p className="text-slate-400 font-mono text-[10px] font-bold uppercase tracking-widest mb-1">Unidades</p>
+                                    <p className="text-2xl font-mono font-black">16</p>
                                 </div>
                             </div>
                         </div>
-                        <span className="material-icons absolute -bottom-4 -right-4 text-[120px] text-white/10 rotate-12">account_balance_wallet</span>
+                        <span className="material-icons absolute -bottom-4 -right-4 text-[120px] text-slate-800 dark:text-slate-700 rotate-12">account_balance_wallet</span>
                     </div>
 
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col h-[600px]">
-                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky top-0 z-20 rounded-t-xl">
-                            <div className="flex items-center justify-between">
-                                <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 uppercase tracking-tight">
-                                    <span className="material-icons text-primary">list</span>
-                                    Desglose de Gastos
-                                </h4>
-                                <span className="text-[10px] font-black text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded uppercase">Tasa: {parseFloat(bcvRate).toFixed(2)}</span>
+                    {!isPublished && (
+                        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 p-4">
+                            <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
+                                <span className="material-icons text-sm">add_circle</span>
+                                Cargar Nuevo Gasto
+                            </h4>
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-1">
+                                    <input
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 p-3 rounded-none text-xs font-mono font-bold uppercase outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
+                                        placeholder="Descripción del concepto..."
+                                        value={newExpenseDesc}
+                                        spellCheck="true"
+                                        list="expense-suggestions"
+                                        onChange={(e) => setNewExpenseDesc(e.target.value)}
+                                    />
+                                    <datalist id="expense-suggestions">
+                                        {commonExpenses.map((desc, idx) => (
+                                            <option key={idx} value={desc} />
+                                        ))}
+                                    </datalist>
+                                </div>
+                                <div className="w-full md:w-48 relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-xs">$</span>
+                                    <input
+                                        type="number"
+                                        className="w-full pl-8 pr-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-none text-xs font-mono font-bold outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
+                                        placeholder="0.00"
+                                        value={newExpenseAmount}
+                                        onChange={(e) => setNewExpenseAmount(e.target.value)}
+                                    />
+                                </div>
+                                <button
+                                    onClick={handleAddExpense}
+                                    className="px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-mono text-[10px] font-black uppercase tracking-widest hover:invert transition-all"
+                                >
+                                    Añadir
+                                </button>
                             </div>
                         </div>
-                        <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-                            <div className="space-y-4">
-                                {expenses.map((exp) => (
-                                    <div key={exp.id} className="group p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <input
-                                                className="flex-1 bg-transparent border-none text-sm font-bold text-slate-800 dark:text-white outline-none uppercase disabled:opacity-75"
-                                                value={exp.description}
-                                                disabled={isPublished}
-                                                onChange={(e) => handleUpdateExpense(exp.id, 'description', e.target.value.toUpperCase())}
-                                                placeholder="Descripción..."
-                                            />
-                                            {!isPublished && (
-                                                <button onClick={() => handleRemoveExpense(exp.id)} className="text-red-400 hover:text-red-600">
-                                                    <span className="material-icons text-sm">delete</span>
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="relative w-32">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                    )}
+
+                    <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800">
+                        <div className="p-4 border-b border-slate-300 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
+                            <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-xs">
+                                Listado Operativo de Gastos
+                            </h4>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">Reserva:</span>
+                                    <div className="relative w-32">
+                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold text-[10px]">$</span>
+                                        <input
+                                            type="number"
+                                            value={reserveFundAmount}
+                                            disabled={isPublished}
+                                            onChange={(e) => setReserveFundAmount(e.target.value)}
+                                            className="w-full pl-6 py-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none text-xs font-mono font-black focus:border-slate-900 dark:focus:border-white outline-none"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto max-h-[440px] overflow-y-auto custom-scrollbar-thin">
+                            <table className="w-full border-collapse">
+                                <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-900 shadow-sm">
+                                    <tr className="bg-slate-100 dark:bg-slate-800/50 text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest border-b border-slate-200 dark:border-slate-800">
+                                        <th className="px-6 py-4 text-left">Concepto</th>
+                                        <th className="px-6 py-4 text-right">Monto ($)</th>
+                                        <th className="px-6 py-4 text-right">Pagado (Bs)</th>
+                                        <th className="px-6 py-4 text-right">Equivalente ($)</th>
+                                        <th className="px-6 py-4 text-right">Diferencia ($)</th>
+                                        <th className="px-6 py-4 text-center">Estado</th>
+                                        <th className="px-6 py-4 text-center w-40">Asentar Pago</th>
+                                        {!isPublished && <th className="px-6 py-4 text-center w-16"></th>}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {expenses.map((exp) => (
+                                        <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    className="w-full bg-transparent border-none text-xs font-mono font-bold text-slate-800 dark:text-white outline-none uppercase disabled:opacity-75"
+                                                    value={exp.description}
+                                                    disabled={isPublished}
+                                                    spellCheck="true"
+                                                    list="expense-suggestions"
+                                                    onChange={(e) => handleUpdateExpense(exp.id, 'description', e.target.value.toUpperCase())}
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <span className="text-slate-400 font-mono text-xs">$</span>
                                                     <input
                                                         type="number"
                                                         value={exp.amount}
                                                         disabled={isPublished}
                                                         onChange={(e) => handleUpdateExpense(exp.id, 'amount', e.target.value)}
-                                                        className="w-full pl-8 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 rounded-lg text-sm font-bold"
+                                                        className="w-24 bg-transparent border-none text-right text-sm font-mono font-black text-slate-900 dark:text-white focus:ring-0 outline-none"
                                                     />
                                                 </div>
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase w-fit ${exp.payment_status === 'PAGADO' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                                                            {exp.payment_status || 'PENDIENTE'}
-                                                        </span>
-                                                        {exp.payment_status === 'PAGADO' && (
-                                                            <button
-                                                                onClick={() => handleResetPayment(exp.id)}
-                                                                className="text-slate-400 hover:text-red-500 transition-colors"
-                                                                title="Anular pago para corregir"
-                                                            >
-                                                                <span className="material-icons text-[12px]">undo</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono text-[11px] font-bold text-slate-500 bg-slate-50/20">
+                                                {exp.amount_bs > 0 ? `${formatNumber(exp.amount_bs)} Bs` : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono text-[11px] font-bold text-emerald-600">
+                                                {exp.amount_usd_at_payment > 0 ? `$ ${formatNumber(exp.amount_usd_at_payment)}` : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-right font-mono text-[11px] font-bold">
+                                                {exp.payment_status === 'PAGADO' ? (
+                                                    <span className={exp.amount - exp.amount_usd_at_payment > 0.01 ? "text-emerald-500" : exp.amount - exp.amount_usd_at_payment < -0.01 ? "text-red-500" : "text-slate-400"}>
+                                                        $ {formatNumber(Math.abs(exp.amount - exp.amount_usd_at_payment))}
+                                                    </span>
+                                                ) : '-'}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`px-2 py-0.5 border text-[9px] font-mono font-black uppercase tracking-widest ${exp.payment_status === 'PAGADO' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-300'
+                                                        }`}>
+                                                        {exp.payment_status || 'PENDIENTE'}
+                                                    </span>
                                                     {exp.bank_reference && (
-                                                        <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tight">REF: {exp.bank_reference}</span>
+                                                        <span className="text-[9px] font-mono font-bold text-slate-500 uppercase tracking-tight">R: {exp.bank_reference}</span>
                                                     )}
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <div className="text-right">
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Bs.</p>
-                                                    <p className="text-xs font-black text-slate-600 dark:text-slate-300">
-                                                        {exp.payment_status === 'PAGADO' && exp.amount_bs
-                                                            ? formatNumber(exp.amount_bs)
-                                                            : formatNumber(exp.amount * bcvRate)}
-                                                    </p>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {isPublished && exp.payment_status !== 'PAGADO' && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedExpense(exp);
+                                                                setShowPaymentModal(true);
+                                                            }}
+                                                            className="px-3 py-1.5 rounded-none border border-slate-900 dark:border-white text-slate-900 dark:text-white text-[10px] font-mono font-black uppercase hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all flex items-center gap-2"
+                                                        >
+                                                            <span className="material-icons text-xs">payments</span>
+                                                            Liquidar
+                                                        </button>
+                                                    )}
+                                                    {exp.payment_status === 'PAGADO' && (
+                                                        <button
+                                                            onClick={() => handleResetPayment(exp.id)}
+                                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                                            title="Anular conformidad"
+                                                        >
+                                                            <span className="material-icons text-xs">undo</span>
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {isPublished && exp.payment_status !== 'PAGADO' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedExpense(exp);
-                                                            setShowPaymentModal(true);
-                                                        }}
-                                                        className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm"
-                                                        title="Registrar Pago"
-                                                    >
-                                                        <span className="material-icons text-sm">payments</span>
+                                            </td>
+                                            {!isPublished && (
+                                                <td className="px-6 py-4 text-center">
+                                                    <button onClick={() => handleRemoveExpense(exp.id)} className="text-slate-300 hover:text-red-600 transition-colors">
+                                                        <span className="material-icons text-sm">delete</span>
                                                     </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-
-                                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div>
-                                            <h4 className="font-bold text-slate-800 dark:text-white uppercase text-xs">Fondo de Reserva</h4>
-                                            <p className="text-[10px] text-slate-400 underline decoration-primary/30">Monto global de la torre</p>
-                                        </div>
-                                        <div className="relative w-32">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
-                                            <input
-                                                type="number"
-                                                value={reserveFundAmount}
-                                                disabled={isPublished}
-                                                onChange={(e) => setReserveFundAmount(e.target.value)}
-                                                className="w-full pl-8 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 rounded-lg text-sm font-black"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {!isPublished && (
-                                    <button onClick={handleAddExpense} className="w-full py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-bold text-sm hover:border-primary hover:text-primary transition-all flex items-center justify-center gap-2">
-                                        <span className="material-icons text-sm">add</span> AGREGAR GASTO
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Column: Units List */}
-                <div className="lg:col-span-12 xl:col-span-8 flex flex-col gap-6 h-[600px] lg:h-[750px] xl:h-[800px]">
-                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden flex flex-col h-full">
-                        <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between sticky top-0 z-20">
-                            <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-xs">Cálculo de Unidades - Torre {selectedTower}</h3>
-                            <span className="text-xs font-bold text-slate-500">16 APTOS</span>
-                        </div>
-                        <div className="overflow-auto flex-1 custom-scrollbar">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800 shadow-sm">
-                                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-bold border-b border-slate-100 dark:border-slate-800">
-                                        <th className="px-6 py-4">Apartamento</th>
-                                        <th className="px-6 py-4 text-center">Factor</th>
-                                        <th className="px-6 py-4 text-right">Monto USD</th>
-                                        <th className="px-6 py-4 text-right">Monto BS.</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                                    {[1, 2, 3, 4].map(floor => (
-                                        ['A', 'B', 'C', 'D'].map(letter => {
-                                            const aptNum = floor === 1 ? `PB-${letter}` : `${floor - 1}-${letter}`;
-                                            return (
-                                                <tr key={aptNum} className="hover:bg-primary/5 transition-colors group">
-                                                    <td className="px-6 py-3 font-bold text-slate-700 dark:text-slate-300">{aptNum}</td>
-                                                    <td className="px-6 py-3 text-center text-slate-500">1/16</td>
-                                                    <td className="px-6 py-3 text-right font-black">$ {formatCurrency(aliquotPerUnit)}</td>
-                                                    <td className="px-6 py-3 text-right font-bold text-primary">Bs. {formatNumber(aliquotPerUnit * bcvRate)}</td>
-                                                </tr>
-                                            );
-                                        })
+                                                </td>
+                                            )}
+                                        </tr>
                                     ))}
+                                    {expenses.length === 0 && (
+                                        <tr>
+                                            <td colSpan={isPublished ? 4 : 5} className="px-6 py-12 text-center text-slate-400 font-mono text-xs uppercase tracking-widest italic">
+                                                No hay gastos registrados en este periodo
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
-                                <tfoot className="sticky bottom-0 z-10 bg-white dark:bg-slate-900 border-t-2 border-primary/20">
-                                    <tr>
-                                        <td colSpan="2" className="px-6 py-4 font-black uppercase text-right">Total Facturado</td>
-                                        <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white">$ {formatCurrency(finalTotal)}</td>
-                                        <td className="px-6 py-4 text-right font-black text-primary">Bs. {formatNumber(finalTotal * bcvRate)}</td>
+                                <tfoot className="sticky bottom-0 z-20 bg-slate-50 dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+                                    <tr className="font-mono font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800/50">
+                                        <td className="px-6 py-4 text-right uppercase text-[10px] tracking-widest text-slate-500">Subtotal Operativo</td>
+                                        <td className="px-6 py-4 text-right text-xs">
+                                            $ {formatNumber(expensesTotals.base)}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-[11px] text-slate-500">
+                                            {expensesTotals.paidBs > 0 ? `${formatNumber(expensesTotals.paidBs)} Bs` : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-[11px] text-emerald-600">
+                                            {expensesTotals.equivUsd > 0 ? `$ ${formatNumber(expensesTotals.equivUsd)}` : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-[11px]">
+                                            <span className={expensesTotals.diffUsd > 0.01 ? "text-emerald-500" : expensesTotals.diffUsd < -0.01 ? "text-red-500" : "text-slate-400"}>
+                                                $ {formatNumber(Math.abs(expensesTotals.diffUsd))}
+                                            </span>
+                                        </td>
+                                        <td colSpan={isPublished ? 2 : 3}></td>
+                                    </tr>
+                                    <tr className="font-mono font-black text-slate-900 dark:text-white bg-slate-900 dark:bg-white text-white dark:text-slate-900">
+                                        <td className="px-6 py-4 text-right uppercase text-[10px] tracking-widest text-slate-400 dark:text-slate-500">Total a Distribuir</td>
+                                        <td className="px-6 py-4 text-right text-lg">
+                                            $ {formatCurrency(finalTotal)}
+                                        </td>
+                                        <td colSpan={isPublished ? 2 : 3} className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2 text-[10px] uppercase tracking-widest opacity-70">
+                                                <span className="material-icons text-xs">info</span>
+                                                16 Fracciones de $ {formatCurrency(aliquotPerUnit)}
+                                            </div>
+                                        </td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
                         {/* Footer Controls */}
-                        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-slate-100 dark:border-slate-800">
-                            <div className="flex items-center gap-4">
-                                <input
-                                    type="date"
-                                    value={selectedRateDate}
-                                    onChange={(e) => setSelectedRateDate(e.target.value)}
-                                    className="bg-white dark:bg-slate-900 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary"
-                                />
-                                <div className="flex items-center gap-2 border-l pl-4">
-                                    <button onClick={() => fetchBCVRate(selectedRateDate)} className={`p-1.5 text-primary hover:bg-primary/10 rounded-lg ${loadingRate ? 'animate-spin' : ''}`}>
-                                        <span className="material-icons text-sm">sync</span>
-                                    </button>
-                                    <input
-                                        type="number"
-                                        value={bcvRate}
-                                        disabled={isPublished}
-                                        onChange={(e) => setBcvRate(parseFloat(e.target.value) || 0)}
-                                        className="w-20 bg-white dark:bg-slate-900 border border-slate-200 rounded text-xs font-black text-primary p-1 text-center"
-                                    />
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Bs/USD</span>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                        <div className="p-4 bg-slate-100 dark:bg-slate-950 flex flex-col md:flex-row items-center justify-end gap-4 border-t-2 border-slate-300 dark:border-slate-800">
+                            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0 justify-end">
                                 {!isPublished && (
                                     <button
                                         onClick={handleSaveData}
                                         disabled={saving || loadingData}
-                                        className="px-6 py-3 bg-white dark:bg-slate-900 border-2 border-primary text-primary font-black hover:bg-primary hover:text-white rounded-lg shadow-sm flex items-center gap-2"
+                                        className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-[10px] uppercase font-black hover:border-slate-900 dark:hover:border-white rounded-none flex items-center gap-2 transition-colors disabled:opacity-50"
                                     >
-                                        <span className="material-icons text-sm">{saving ? 'sync' : 'save'}</span>
-                                        GUARDAR BORRADOR
+                                        <span className="material-icons text-[14px]">{saving ? 'sync' : 'save_as'}</span>
+                                        RETENER PRESUPUESTO
                                     </button>
                                 )}
 
                                 <button
                                     onClick={handleStatusToggle}
                                     disabled={saving || (!isPublished && !currentPeriodId)}
-                                    className={`px-6 py-3 font-bold rounded-lg flex items-center gap-2 shadow-lg disabled:opacity-50 ${isPublished ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'
-                                        } text-white`}
+                                    className={`px-6 py-3 font-mono text-[10px] uppercase font-black rounded-none flex items-center gap-2 transition-all disabled:opacity-50 border-2 border-transparent ${isPublished ? 'bg-amber-600 hover:bg-amber-700 text-white' : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:invert'
+                                        }`}
                                 >
-                                    <span className="material-icons text-sm">{isPublished ? 'edit' : 'lock'}</span>
-                                    {isPublished ? 'RE-ABRIR' : 'CERRAR RECIBO'}
+                                    <span className="material-icons text-[14px]">{isPublished ? 'edit_note' : 'lock_open'}</span>
+                                    {isPublished ? 'RE-ABRIR EDICIÓN' : 'ASENTAR Y PUBLICAR'}
                                 </button>
 
                                 <button
                                     onClick={() => setShowPrintPreview(true)}
-                                    className="px-10 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg shadow-lg flex items-center gap-3 active:scale-95 transition-all cursor-pointer"
+                                    className="px-6 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-mono text-[10px] uppercase font-black hover:border-slate-900 dark:hover:border-white rounded-none flex items-center gap-2 transition-colors"
                                 >
-                                    <span className="material-icons text-sm">print</span> IMPRIMIR
+                                    <span className="material-icons text-[14px]">print</span>
+                                    IMPRIMIR RELACIÓN
                                 </button>
                             </div>
                         </div>
@@ -606,7 +732,6 @@ const AliquotsConfig = () => {
                         selectedTower,
                         period,
                         expenses,
-                        bcvRate,
                         finalTotal,
                         aliquotPerUnit,
                         reserveFundAmount

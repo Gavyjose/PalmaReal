@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import useSWR from 'swr';
 import { supabase } from '../supabase';
 import CSVImporter from '../components/CSVImporter';
 
@@ -13,232 +14,209 @@ const MONTHS = [
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
-const AccountStatement = () => {
-    const [bankTransactions, setBankTransactions] = useState([]);
-    const [systemTransactions, setSystemTransactions] = useState([]);
-    const [loading, setLoading] = useState(false);
+const fetchTowersFetcher = async () => {
+    const { data } = await supabase
+        .from('towers')
+        .select('name')
+        .eq('is_active', true)
+        .order('name');
+    return data ? data.map(t => t.name) : [];
+};
 
+const fetchAccountDataFetcher = async ([_, selectedTower, selectedMonth, selectedYear]) => {
+    if (!selectedTower || !selectedMonth || !selectedYear) return null;
+
+    const startDate = `${selectedYear}-${selectedMonth}-01`;
+    const endDate = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0];
+
+    // 1. Fetch Bank Transactions
+    const { data: bankData, error: bankError } = await supabase
+        .from('bank_transactions')
+        .select('id, transaction_date, description, amount, reference, status, matched_payment_id, match_type')
+        .gte('transaction_date', startDate)
+        .lte('transaction_date', endDate)
+        .order('transaction_date', { ascending: false });
+
+    if (bankError) console.error('Bank fetch error:', bankError);
+
+    // 2. Fetch System Payments in Bs (By Tower & Date)
+    let systemData = [];
+
+    const { data: towerUnits, error: towerErr } = await supabase
+        .from('units')
+        .select('id, number')
+        .eq('tower', selectedTower);
+
+    if (towerErr) {
+        console.error('Error fetching tower units:', towerErr.message);
+    } else if (towerUnits && towerUnits.length > 0) {
+        const unitIds = towerUnits.map(u => u.id);
+        const unitMap = {};
+        towerUnits.forEach(u => { unitMap[u.id] = u.number; });
+
+        // Step 2a: Query INCOME (unit_payments)
+        const { data: incomeData, error: incomeError } = await supabase
+            .from('unit_payments')
+            .select('id, unit_id, amount_bs, amount_usd, bcv_rate, payment_date, reference, status')
+            .in('unit_id', unitIds)
+            .gte('payment_date', startDate)
+            .lte('payment_date', endDate)
+            .order('payment_date', { ascending: false });
+
+        if (!incomeError) {
+            systemData.push(...(incomeData || []).map(p => ({
+                ...p,
+                _unitNumber: unitMap[p.unit_id],
+                _type: 'INCOME'
+            })));
+        }
+
+        // Step 2b: Query EXPENSES (period_expenses)
+        const periodName = `${MONTHS[parseInt(selectedMonth) - 1]} ${selectedYear}`.toUpperCase();
+        const { data: periods, error: periodsError } = await supabase
+            .from('condo_periods')
+            .select('id')
+            .eq('tower_id', selectedTower)
+            .eq('period_name', periodName);
+
+        if (!periodsError && periods && periods.length > 0) {
+            const periodIds = periods.map(p => p.id);
+            const { data: expenseData, error: expenseError } = await supabase
+                .from('period_expenses')
+                .select('id, description, amount_bs, amount_usd_at_payment, bcv_rate_at_payment, payment_date, bank_reference, payment_status')
+                .in('period_id', periodIds)
+                .eq('payment_status', 'PAGADO');
+
+            if (!expenseError) {
+                systemData.push(...(expenseData || []).map(e => ({
+                    id: e.id,
+                    unit_id: null,
+                    amount_bs: e.amount_bs,
+                    amount_usd: e.amount_usd_at_payment,
+                    bcv_rate: e.bcv_rate_at_payment,
+                    payment_date: e.payment_date,
+                    reference: e.bank_reference,
+                    status: e.payment_status,
+                    _description: e.description,
+                    _type: 'EXPENSE'
+                })));
+            }
+        }
+    }
+
+    // 3. Process Bank Data
+    const formattedBank = (bankData || []).map(tx => ({
+        id: tx.id,
+        date: tx.transaction_date,
+        description: tx.description || 'Sin descripción',
+        amount: parseFloat(tx.amount) || 0,
+        reference: tx.reference || '-',
+        match_type: tx.match_type,
+        status: tx.status === 'MATCHED' ? 'verified' : (tx.status === 'IGNORED' ? 'ignored' : 'unmatched')
+    }));
+
+    // 4. Process System Data - show in Bs
+    const matchInfoMap = new Map();
+    (bankData || []).forEach(tx => {
+        if (tx.matched_payment_id) {
+            matchInfoMap.set(tx.matched_payment_id, tx.match_type);
+        }
+    });
+
+    const formattedSystem = systemData.map(p => {
+        const amountBs = parseFloat(p.amount_bs) || 0;
+        const amountUsd = parseFloat(p.amount_usd) || 0;
+        const bcvRate = parseFloat(p.bcv_rate) || 0;
+        const displayBs = amountBs > 0 ? amountBs : (amountUsd * (bcvRate || 1));
+
+        const rawStatus = (p.status || '').toUpperCase();
+        let status = (rawStatus === 'VERIFIED' || rawStatus === 'PAGADO') ? 'verified' : 'pending';
+
+        const matchType = matchInfoMap.get(p.id);
+        if (matchInfoMap.has(p.id)) status = 'verified';
+
+        const description = p._type === 'EXPENSE'
+            ? `GASTO: ${p._description}`
+            : `Apto ${p._unitNumber || '?'}`;
+
+        return {
+            id: p.id,
+            ref: p.reference || '-',
+            description: description,
+            date: p.payment_date,
+            amount_bs: p._type === 'EXPENSE' ? -displayBs : displayBs,
+            amount_usd: p._type === 'EXPENSE' ? -amountUsd : amountUsd,
+            bcv_rate: bcvRate,
+            status,
+            type: p._type,
+            match_type: matchType
+        };
+    });
+
+    formattedSystem.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // 5. Calculate Stats in Bs
+    const totalBank = formattedBank.reduce((sum, tx) => sum + tx.amount, 0);
+    const totalSystem = formattedSystem.reduce((sum, p) => sum + (p.amount_bs || p.amount_usd), 0);
+
+    // 6. Identify Bank Commissions
+    const COMMISSION_KEYWORDS = [
+        'COMISION', 'COMIS.', 'MANTENIMIENTO DE CUENTA', 'USO DEL CANAL', 'SMS',
+        'ITF', 'GASTOS ADMINISTRATIVOS', 'CARGO POR MANTENIMIENTO'
+    ];
+
+    const commissions = formattedBank.filter(tx => {
+        const desc = tx.description.toUpperCase();
+        return tx.amount < 0 && COMMISSION_KEYWORDS.some(kw => desc.includes(kw));
+    });
+
+    const totalCommissions = commissions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+    return {
+        bankTransactions: formattedBank,
+        systemTransactions: formattedSystem,
+        commissionDetails: commissions,
+        stats: {
+            bankBalance: totalBank,
+            systemBalance: totalSystem,
+            difference: totalBank - totalSystem,
+            bankCommissions: totalCommissions
+        }
+    };
+};
+
+const AccountStatement = () => {
     // Filters
-    const [towers, setTowers] = useState([]);
-    const [selectedTower, setSelectedTower] = useState('');
     const now = new Date();
     const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
     const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()));
+    const [showCommissionsDetail, setShowCommissionsDetail] = useState(false);
+    const [isMutating, setIsMutating] = useState(false);
 
-    const [stats, setStats] = useState({
+    // 1. Fetch Towers
+    const { data: towers = [] } = useSWR('towers', fetchTowersFetcher);
+
+    // Automatically select the first tower once towers are loaded if no selection exists
+    const [localSelectedTower, setLocalSelectedTower] = useState('');
+    const selectedTower = localSelectedTower || (towers.length > 0 ? towers[0] : '');
+
+    // 2. Fetch Account Data (Dependent Fetching)
+    const { data: accountData, isLoading: isDataLoading, mutate: mutateAccountData } = useSWR(
+        selectedTower ? ['accountData', selectedTower, selectedMonth, selectedYear] : null,
+        fetchAccountDataFetcher
+    );
+
+    const loading = isDataLoading || isMutating;
+
+    // Derived State
+    const bankTransactions = accountData?.bankTransactions || [];
+    const systemTransactions = accountData?.systemTransactions || [];
+    const commissionDetails = accountData?.commissionDetails || [];
+    const stats = accountData?.stats || {
         bankBalance: 0,
         systemBalance: 0,
         difference: 0,
         bankCommissions: 0
-    });
-
-    const [showCommissionsDetail, setShowCommissionsDetail] = useState(false);
-    const [commissionDetails, setCommissionDetails] = useState([]);
-
-    useEffect(() => {
-        fetchTowers();
-    }, []);
-
-    useEffect(() => {
-        if (selectedTower) {
-            fetchData();
-        }
-    }, [selectedTower, selectedMonth, selectedYear]);
-
-    const fetchTowers = async () => {
-        const { data } = await supabase
-            .from('towers')
-            .select('name')
-            .eq('is_active', true)
-            .order('name');
-
-        if (data) {
-            const activeTowerNames = data.map(t => t.name);
-            setTowers(activeTowerNames);
-            if (activeTowerNames.length > 0 && !activeTowerNames.includes(selectedTower)) {
-                setSelectedTower(activeTowerNames[0]);
-            }
-        }
-    };
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const startDate = `${selectedYear}-${selectedMonth}-01`;
-            const endDate = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0];
-
-            // 1. Fetch Bank Transactions
-            const { data: bankData, error: bankError } = await supabase
-                .from('bank_transactions')
-                .select('id, transaction_date, description, amount, reference, status, matched_payment_id, match_type')
-                .gte('transaction_date', startDate)
-                .lte('transaction_date', endDate)
-                .order('transaction_date', { ascending: false });
-
-            if (bankError) {
-                console.error('Bank fetch error:', bankError);
-            }
-
-            // 2. Fetch System Payments in Bs (By Tower & Date)
-            // Step 1: Get unit IDs for the selected tower
-            let systemData = [];
-
-            const { data: towerUnits, error: towerErr } = await supabase
-                .from('units')
-                .select('id, number')
-                .eq('tower', selectedTower);
-
-            if (towerErr) {
-                console.error('Error fetching tower units:', towerErr.message);
-            } else if (towerUnits && towerUnits.length > 0) {
-                const unitIds = towerUnits.map(u => u.id);
-                const unitMap = {};
-                towerUnits.forEach(u => { unitMap[u.id] = u.number; });
-                console.log(`Torre ${selectedTower}: ${unitIds.length} unidades, buscando movimientos de ${startDate} a ${endDate}`);
-
-                // Step 2a: Query INCOME (unit_payments)
-                const { data: incomeData, error: incomeError } = await supabase
-                    .from('unit_payments')
-                    .select('id, unit_id, amount_bs, amount_usd, bcv_rate, payment_date, reference, status')
-                    .in('unit_id', unitIds)
-                    .gte('payment_date', startDate)
-                    .lte('payment_date', endDate)
-                    .order('payment_date', { ascending: false });
-
-                console.log('unit_payments query result:', { error: incomeError?.message, count: incomeData?.length });
-
-                if (!incomeError) {
-                    systemData.push(...(incomeData || []).map(p => ({
-                        ...p,
-                        _unitNumber: unitMap[p.unit_id],
-                        _type: 'INCOME'
-                    })));
-                }
-
-                // Step 2b: Query EXPENSES (period_expenses)
-                // First get period_ids for this tower and date range
-                const periodName = `${MONTHS[parseInt(selectedMonth) - 1]} ${selectedYear}`.toUpperCase();
-                const { data: periods, error: periodsError } = await supabase
-                    .from('condo_periods')
-                    .select('id')
-                    .eq('tower_id', selectedTower)
-                    .eq('period_name', periodName);
-
-                if (!periodsError && periods && periods.length > 0) {
-                    const periodIds = periods.map(p => p.id);
-                    const { data: expenseData, error: expenseError } = await supabase
-                        .from('period_expenses')
-                        .select('id, description, amount_bs, amount_usd_at_payment, bcv_rate_at_payment, payment_date, bank_reference, payment_status')
-                        .in('period_id', periodIds)
-                        .eq('payment_status', 'PAGADO');
-
-                    if (!expenseError) {
-                        systemData.push(...(expenseData || []).map(e => ({
-                            id: e.id,
-                            unit_id: null,
-                            amount_bs: e.amount_bs,
-                            amount_usd: e.amount_usd_at_payment,
-                            bcv_rate: e.bcv_rate_at_payment,
-                            payment_date: e.payment_date,
-                            reference: e.bank_reference,
-                            status: e.payment_status,
-                            _description: e.description,
-                            _type: 'EXPENSE'
-                        })));
-                    }
-                }
-            } else {
-                console.warn('No units found for tower:', selectedTower, towerUnits);
-            }
-
-            // 3. Process Bank Data
-            const formattedBank = (bankData || []).map(tx => ({
-                id: tx.id,
-                date: tx.transaction_date,
-                description: tx.description || 'Sin descripción',
-                amount: parseFloat(tx.amount) || 0,
-                reference: tx.reference || '-',
-                match_type: tx.match_type,
-                status: tx.status === 'MATCHED' ? 'verified' : (tx.status === 'IGNORED' ? 'ignored' : 'unmatched')
-            }));
-
-            // 4. Process System Data - show in Bs
-            // Map matched system IDs to their match_type
-            const matchInfoMap = new Map();
-            (bankData || []).forEach(tx => {
-                if (tx.matched_payment_id) {
-                    matchInfoMap.set(tx.matched_payment_id, tx.match_type);
-                }
-            });
-
-            const formattedSystem = systemData.map(p => {
-                const amountBs = parseFloat(p.amount_bs) || 0;
-                const amountUsd = parseFloat(p.amount_usd) || 0;
-                const bcvRate = parseFloat(p.bcv_rate) || 0;
-                const displayBs = amountBs > 0 ? amountBs : (amountUsd * (bcvRate || 1));
-
-                // Normalize status
-                const rawStatus = (p.status || '').toUpperCase();
-                let status = (rawStatus === 'VERIFIED' || rawStatus === 'PAGADO') ? 'verified' : 'pending';
-
-                // If it's already reconciled to a bank transaction, force verified status in view
-                const matchType = matchInfoMap.get(p.id);
-                if (matchInfoMap.has(p.id)) status = 'verified';
-
-                // Handle description for expenses vs income
-                const description = p._type === 'EXPENSE'
-                    ? `GASTO: ${p._description}`
-                    : `Apto ${p._unitNumber || '?'}`;
-
-                return {
-                    id: p.id,
-                    ref: p.reference || '-',
-                    description: description,
-                    date: p.payment_date,
-                    amount_bs: p._type === 'EXPENSE' ? -displayBs : displayBs,
-                    amount_usd: p._type === 'EXPENSE' ? -amountUsd : amountUsd,
-                    bcv_rate: bcvRate,
-                    status,
-                    type: p._type,
-                    match_type: matchType
-                };
-            });
-
-            // Sort consolidated data by date desc
-            formattedSystem.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-            // 5. Calculate Stats in Bs
-            const totalBank = formattedBank.reduce((sum, tx) => sum + tx.amount, 0);
-            const totalSystem = formattedSystem.reduce((sum, p) => sum + (p.amount_bs || p.amount_usd), 0);
-
-            // 6. Identify Bank Commissions
-            const COMMISSION_KEYWORDS = [
-                'COMISION', 'COMIS.', 'MANTENIMIENTO', 'USO DEL CANAL', 'SMS',
-                'ITF', 'GASTOS ADMINISTRATIVOS', 'CARGO POR MANTENIMIENTO'
-            ];
-
-            const commissions = formattedBank.filter(tx => {
-                const desc = tx.description.toUpperCase();
-                return tx.amount < 0 && COMMISSION_KEYWORDS.some(kw => desc.includes(kw));
-            });
-
-            const totalCommissions = commissions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-
-            setBankTransactions(formattedBank);
-            setSystemTransactions(formattedSystem);
-            setCommissionDetails(commissions);
-            setStats({
-                bankBalance: totalBank,
-                systemBalance: totalSystem,
-                difference: totalBank - totalSystem,
-                bankCommissions: totalCommissions
-            });
-
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleClearBankTransactions = async () => {
@@ -253,12 +231,12 @@ const AccountStatement = () => {
 
             if (error) throw error;
             alert('✅ Extracto bancario borrado exitosamente.');
-            fetchData();
+            mutateAccountData();
         } catch (error) {
             console.error('Clear bank error:', error);
             alert('Error al borrar: ' + error.message);
         } finally {
-            setLoading(false);
+            setIsMutating(false);
         }
     };
 
@@ -274,12 +252,94 @@ const AccountStatement = () => {
 
             if (error) throw error;
             alert('✅ Marcas de conciliación eliminadas.');
-            fetchData();
+            mutateAccountData();
         } catch (error) {
             console.error('Reset error:', error);
             alert('Error al resetear: ' + error.message);
         } finally {
-            setLoading(false);
+            setIsMutating(false);
+        }
+    };
+
+    const handleSaveBankCommissions = async () => {
+        try {
+            const startDate = `${selectedYear}-${selectedMonth}-01`;
+            const endDate = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0];
+
+            const { data: bankData, error: bankError } = await supabase
+                .from('bank_transactions')
+                .select('description, amount')
+                .gte('transaction_date', startDate)
+                .lte('transaction_date', endDate);
+
+            if (bankError) throw bankError;
+
+            const COMMISSION_KEYWORDS = [
+                'COMISION', 'COMIS.', 'MANTENIMIENTO', 'USO DEL CANAL',
+                'SMS', 'ITF', 'GASTOS ADMINISTRATIVOS', 'CARGO POR MANTENIMIENTO',
+                'BANCAREA', 'BANCARIA'
+            ];
+
+            const totalCommissions = (bankData || [])
+                .filter(tx => {
+                    const desc = (tx.description || '').toUpperCase();
+                    return tx.amount < 0 && COMMISSION_KEYWORDS.some(kw => desc.includes(kw));
+                })
+                .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+
+            // Formato: "FEBRERO 2026" (igual que AliquotsConfig)
+            const monthName = MONTHS[parseInt(selectedMonth) - 1].toUpperCase();
+            const periodName = `${monthName} ${selectedYear}`;
+
+            const { data: period, error: periodError } = await supabase
+                .from('condo_periods')
+                .select('id')
+                .eq('period_name', periodName)
+                .maybeSingle();
+
+            if (periodError) throw periodError;
+
+            let periodId = period?.id;
+
+            if (!period) {
+                // Obtener el ID de la torre a partir del nombre
+                const { data: towerData } = await supabase
+                    .from('towers')
+                    .select('id')
+                    .eq('name', selectedTower)
+                    .single();
+
+                if (!towerData) {
+                    console.warn('⚠️ No se encontró la torre');
+                    return;
+                }
+
+                const { data: newPeriod, error: createError } = await supabase
+                    .from('condo_periods')
+                    .insert({
+                        tower_id: towerData.id,
+                        period_name: periodName,
+                        status: 'BORRADOR',
+                        reserve_fund: 0,
+                        bank_commissions_total_bs: totalCommissions
+                    })
+                    .select('id')
+                    .single();
+
+                if (createError) throw createError;
+                periodId = newPeriod.id;
+                console.log(`✅ Periodo creado y comisiones guardadas: Bs. ${totalCommissions.toLocaleString('es-VE')}`);
+            } else {
+                const { error: updateError } = await supabase
+                    .from('condo_periods')
+                    .update({ bank_commissions_total_bs: totalCommissions })
+                    .eq('id', period.id);
+
+                if (updateError) throw updateError;
+                console.log(`✅ Comisiones bancarias guardadas: Bs. ${totalCommissions.toLocaleString('es-VE')}`);
+            }
+        } catch (error) {
+            console.error('Error guardando comisiones bancarias:', error);
         }
     };
 
@@ -366,12 +426,12 @@ const AccountStatement = () => {
             }
 
             alert(`✅ Se conciliaron ${allMatches.length} movimientos.\n- ${phase1Matches.length} por Referencia\n- ${phase2Matches.length} por Monto y Fecha`);
-            fetchData();
+            mutateAccountData();
         } catch (err) {
             console.error('Auto reconciliation error:', err);
             alert('Error durante la conciliación: ' + err.message);
         } finally {
-            setLoading(false);
+            setIsMutating(false);
         }
     };
 
@@ -388,8 +448,8 @@ const AccountStatement = () => {
                         <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                             <span className="material-icons text-slate-400 text-lg">location_city</span>
                             <select
-                                value={selectedTower}
-                                onChange={(e) => setSelectedTower(e.target.value)}
+                                value={localSelectedTower || selectedTower}
+                                onChange={(e) => setLocalSelectedTower(e.target.value)}
                                 className="bg-transparent font-bold text-slate-700 dark:text-white outline-none text-sm cursor-pointer"
                             >
                                 <option value="">Torre</option>
@@ -520,7 +580,10 @@ const AccountStatement = () => {
             {/* Actions Bar */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200 dark:border-slate-700 w-full">
                 <div className="flex items-center gap-2">
-                    <CSVImporter onImportSuccess={fetchData} />
+                    <CSVImporter onImportSuccess={async () => {
+                        await mutateAccountData();
+                        await handleSaveBankCommissions();
+                    }} />
                     <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
                     <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                         <button className="px-3 py-1 text-xs font-bold bg-primary text-white rounded-md">Vista Dividida</button>

@@ -6,14 +6,14 @@
   --font-display: "Manrope", sans-serif;
   --font-sans: "Inter", sans-serif;
 
-  --color-primary: #135bec;
+  --color-primary: #0f172a;
   --color-primary-foreground: #ffffff;
 
-  --color-background-light: #f6f6f8;
-  --color-background-dark: #101622;
+  --color-background-light: #f8fafc;
+  --color-background-dark: #0f172a;
 
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
 }
 
 :root {
@@ -43,12 +43,12 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(19, 91, 236, 0.2);
-    border-radius: 10px;
+    background: #cbd5e1;
+    border-radius: 0px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(19, 91, 236, 0.4);
+    background: #94a3b8;
   }
 }
 

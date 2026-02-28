@@ -125,7 +125,7 @@ const Login = () => {
 
                 {/* Bottom Link */}
                 <div className="mt-8 text-center">
-                    <Link className="text-primary hover:text-primary/80 text-sm font-semibold transition-colors" to="#">
+                    <Link className="text-primary hover:text-primary/80 text-sm font-semibold transition-colors" to="/recuperar-clave">
                         ¿Olvidaste tu contraseña?
                     </Link>
                 </div>

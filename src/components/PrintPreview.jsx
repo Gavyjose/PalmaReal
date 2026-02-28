@@ -5,7 +5,7 @@ import { formatCurrency } from '../utils/formatters';
 const PrintPreview = ({ isOpen, onClose, data }) => {
     if (!isOpen || !data) return null;
 
-    const { selectedTower, period, expenses, bcvRate, finalTotal, aliquotPerUnit, reserveFundAmount } = data;
+    const { selectedTower, period, expenses, finalTotal, aliquotPerUnit, reserveFundAmount } = data;
 
     const handlePrint = () => {
         window.print();
@@ -129,7 +129,7 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                 <span className="material-icons text-slate-400 text-4xl mb-3 print:text-2xl print:mb-1">payments</span>
                                 <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1 print:text-[8px]">Recordatorio de Pago</h4>
                                 <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 leading-relaxed uppercase print:text-[9px]">
-                                    Los pagos en bolívares deben realizarse a la tasa oficial del <span className="text-primary font-black">BCV del día en que se efectúe el pago</span>.
+                                    Este recibo refleja montos calculados exclusivamente en <span className="text-primary font-black">Dólares Americanos (USD)</span>.
                                 </p>
                             </div>
                         </div>
@@ -141,7 +141,7 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                     <p className="mb-2 print:mb-1">NOTAS IMPORTANTES:</p>
                                     <ul className="list-disc pl-4 space-y-1 print:space-y-0.5">
                                         <li>Los pagos deben realizarse en los primeros 15 días del mes.</li>
-                                        <li>Pagos en Bs. se reciben únicamente a la tasa BCV del día.</li>
+                                        <li>La administración recomienda el uso de divisas para este periodo.</li>
                                         <li>Cualquier discrepancia notificar a la junta de condominio.</li>
                                     </ul>
                                 </div>

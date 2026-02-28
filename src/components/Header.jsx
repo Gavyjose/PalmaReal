@@ -31,7 +31,7 @@ const Header = ({ title = "Resumen General" }) => {
     };
 
     return (
-        <header className="h-16 bg-white dark:bg-slate-900/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-50 backdrop-blur-md">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-50">
             <div className="flex items-center gap-4">
                 <button className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
                     <span className="material-icons">menu</span>
@@ -50,14 +50,14 @@ const Header = ({ title = "Resumen General" }) => {
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 cursor-pointer active:scale-95"
+                        className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-all shadow-none cursor-pointer border border-transparent dark:hover:bg-white"
                     >
                         <span className="material-icons text-sm">{isOpen ? 'close' : 'add'}</span>
                         Nuevo Registro
                     </button>
 
                     {isOpen && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-2xl py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
+                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-none shadow-sm py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
                             <div className="px-4 py-2 border-b border-slate-50 dark:border-slate-800">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acceso Rápido</p>
                             </div>

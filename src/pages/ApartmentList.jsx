@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import useSWR from 'swr';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
 import { sortUnits } from '../utils/unitSort';
 
+const fetchDirectoryData = async () => {
+    const [unitsRes, ownersRes] = await Promise.all([
+        supabase.from('units').select('*, owners(full_name)'),
+        supabase.from('owners').select('id, full_name, doc_id').order('full_name')
+    ]);
+    return {
+        units: sortUnits(unitsRes.data || []),
+        owners: ownersRes.data || []
+    };
+};
+
 const ApartmentList = () => {
-    const [units, setUnits] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
 
     // Form State
@@ -16,62 +26,44 @@ const ApartmentList = () => {
     const [ownerId, setOwnerId] = useState(null);
     const [creating, setCreating] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [ownersList, setOwnersList] = useState([]);
+    const [isNewOwner, setIsNewOwner] = useState(false);
+    const [newOwnerData, setNewOwnerData] = useState({ full_name: '', doc_id: '', email: '', phone: '' });
 
-    const [selectedTower, setSelectedTower] = useState('');
+    const { data: directoryData, isLoading: isDataLoading, mutate: mutateDirectory } = useSWR('directoryData', fetchDirectoryData);
+    const units = directoryData?.units || [];
+    const ownersList = directoryData?.owners || [];
+
+    const { towers, activeTowers, toggleTowerStatus, loading: towersLoading, lastSelectedTower, setLastSelectedTower } = useTowers();
+    const [selectedTower, setSelectedTower] = useState(lastSelectedTower || '');
     const [showTowerModal, setShowTowerModal] = useState(false);
-
-    // Tower management hook
-    const { towers, activeTowers, toggleTowerStatus, loading: towersLoading } = useTowers();
 
     // Set initial selected tower when towers are loaded
     useEffect(() => {
         if (activeTowers.length > 0 && !selectedTower) {
-            setSelectedTower(activeTowers[0].name);
-            setTower(activeTowers[0].name);
+            const defaultTower = activeTowers.find(t => t.name === lastSelectedTower)?.name || activeTowers[0].name;
+            setSelectedTower(defaultTower);
+            setTower(defaultTower);
+            if (!lastSelectedTower) setLastSelectedTower(defaultTower);
         }
-    }, [activeTowers]);
+    }, [activeTowers, selectedTower, lastSelectedTower, setLastSelectedTower]);
 
-    useEffect(() => {
-        fetchUnits();
-        fetchOwners();
-    }, []);
-
-    const fetchOwners = async () => {
-        const { data } = await supabase.from('owners').select('id, full_name, doc_id').order('full_name');
-        setOwnersList(data || []);
-    };
-
-    const fetchUnits = async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('units')
-                .select(`
-                    *,
-                    owners (full_name)
-                `)
-            if (error) throw error;
-            setUnits(sortUnits(data || []));
-        } catch (error) {
-            console.error('Error fetching units:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const loading = isDataLoading || towersLoading || creating;
 
     const handleDeleteUnit = async (id) => {
         try {
+            setCreating(true);
             const { error } = await supabase
                 .from('units')
                 .delete()
                 .eq('id', id);
 
             if (error) throw error;
-            fetchUnits();
+            mutateDirectory();
         } catch (error) {
             console.error('Error deleting unit:', error);
             alert('Error al eliminar el apartamento');
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -93,11 +85,17 @@ const ApartmentList = () => {
         setFloor('PB');
         setNumber('');
         setOwnerId(null);
+        setIsNewOwner(false);
+        setNewOwnerData({ full_name: '', doc_id: '', email: '', phone: '' });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!tower || !floor || !number) return;
+        if (isNewOwner && !newOwnerData.full_name) {
+            alert('El nombre del nuevo propietario es obligatorio.');
+            return;
+        }
 
         // Construct unit identifier, e.g., "3-D" or "PB-A"
         // 'number' state currently holds the Letter (A, B, C, D)
@@ -105,6 +103,23 @@ const ApartmentList = () => {
 
         try {
             setCreating(true);
+            let finalOwnerId = ownerId;
+
+            if (isNewOwner) {
+                const { data: newOwnerRes, error: ownerError } = await supabase
+                    .from('owners')
+                    .insert([{
+                        full_name: newOwnerData.full_name.toUpperCase(),
+                        doc_id: newOwnerData.doc_id.toUpperCase(),
+                        email: newOwnerData.email,
+                        phone: newOwnerData.phone
+                    }])
+                    .select()
+                    .single();
+
+                if (ownerError) throw new Error('Error al crear el propietario: ' + ownerError.message);
+                finalOwnerId = newOwnerRes.id;
+            }
 
             if (editingId) {
                 const { data, error } = await supabase
@@ -113,7 +128,7 @@ const ApartmentList = () => {
                         tower,
                         floor,
                         number: fullUnitNumber,
-                        owner_id: ownerId
+                        owner_id: finalOwnerId
                     })
                     .eq('id', editingId)
                     .select(); // Return data to verify
@@ -127,17 +142,17 @@ const ApartmentList = () => {
                         tower,
                         floor,
                         number: fullUnitNumber,
-                        owner_id: ownerId
+                        owner_id: finalOwnerId
                     }]);
                 if (error) throw error;
             }
 
             handleCloseModal();
-            fetchUnits();
+            mutateDirectory();
             // alert('Operación exitosa'); // Optional: feedback
         } catch (error) {
             console.error('Error saving unit:', error);
-            alert('Error al guardar el apartamento');
+            alert(error.message || 'Error al guardar el apartamento');
         } finally {
             setCreating(false);
         }
@@ -160,89 +175,92 @@ const ApartmentList = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
                 <div>
-                    <nav className="flex text-slate-500 text-xs mb-2 items-center gap-1">
-                        <Link to="/admin" className="hover:text-primary">Inicio</Link>
-                        <span className="material-icons text-[10px]">chevron_right</span>
-                        <span className="text-slate-800 dark:text-slate-200 font-medium">Apartamentos</span>
+                    <nav className="flex text-slate-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2 items-center gap-2">
+                        <Link to="/admin" className="hover:text-slate-900 dark:hover:text-white transition-colors">Inicio</Link>
+                        <span>/</span>
+                        <span className="text-slate-900 dark:text-white">Apartamentos</span>
                     </nav>
-                    <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white">Directorio de Apartamentos</h1>
-                    <p className="text-slate-500 text-sm mt-1">Selecciona una unidad para ver su detalle, historial y deuda.</p>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Directorio de Apartamentos</h1>
+                    <p className="text-slate-500 text-sm mt-1 font-mono">Maestro de unidades y asignación de deudas.</p>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => setShowTowerModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg font-bold shadow-sm hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-none font-bold text-xs uppercase tracking-widest hover:border-slate-900 dark:hover:border-white transition-colors"
                     >
-                        <span className="material-icons">settings</span>
-                        Configurar Torres
+                        <span className="material-icons text-sm">settings</span>
+                        Configurar
                     </button>
                     <button
                         onClick={() => {
                             setEditingId(null);
-                            setTower(selectedTower); // Prepare with current tower
+                            setTower(selectedTower);
                             setFloor('PB');
                             setNumber('');
                             setShowModal(true);
                         }}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-bold shadow-lg shadow-primary/25 hover:bg-blue-600 transition-colors cursor-pointer"
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert transition-all cursor-pointer border-2 border-transparent"
                     >
-                        <span className="material-icons">add</span>
-                        Nuevo Apartamento
+                        <span className="material-icons text-sm">add</span>
+                        Nueva Unidad
                     </button>
                 </div>
             </div>
 
             {/* Tower Selection */}
-            <div className="flex flex-wrap gap-3 mb-8">
+            <div className="flex flex-wrap gap-0 mb-8 border-b-2 border-slate-300 dark:border-slate-700">
                 {activeTowers.map(t => (
                     <button
                         key={t.name}
-                        onClick={() => setSelectedTower(t.name)}
-                        className={`px-6 py-3 rounded-xl font-bold text-sm transition-all border-2 ${selectedTower === t.name
-                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-primary/30 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        onClick={() => {
+                            setSelectedTower(t.name);
+                            setLastSelectedTower(t.name);
+                        }}
+                        className={`px-6 py-3 rounded-none font-bold text-xs font-mono uppercase tracking-widest transition-all ${selectedTower === t.name
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-2 border-slate-900 dark:border-white border-b-0 -mb-[2px]'
+                            : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-b-2 border-transparent hover:border-slate-400 -mb-[2px]'
                             }`}
                     >
-                        {t.name}
+                        Torre {t.name}
                     </button>
                 ))}
             </div>
 
             {/* Grid of Apartments */}
             {loading ? (
-                <div className="text-center py-20 text-slate-500">Cargando apartamentos...</div>
+                <div className="text-center py-20 text-slate-500 font-mono font-bold uppercase tracking-widest text-xs">Sincronizando maestro de unidades...</div>
             ) : sortedFloors.length === 0 ? (
-                <div className="text-center py-20 text-slate-500">No hay apartamentos registrados en este edificio.</div>
+                <div className="text-center py-20 text-slate-500 font-mono font-bold uppercase tracking-widest text-xs">- Sin Apartamentos Registrados -</div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px border border-slate-300 dark:border-slate-700 bg-slate-300 dark:bg-slate-700 mt-2">
                     {sortedFloors.map(floor => (
                         <React.Fragment key={floor}>
                             {unitsByFloor[floor].map((unit) => (
-                                <div key={unit.id} className="relative group">
+                                <div key={unit.id} className="relative group bg-white dark:bg-slate-900 border border-transparent">
                                     <Link
                                         to={`/admin/apartamentos/${unit.id}`}
-                                        className={`block p-4 rounded-xl border-2 transition-all hover:-translate-y-1 ${unit.status === 'Solvente'
-                                            ? 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-primary/50'
-                                            : 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 hover:border-red-500/50'
+                                        className={`block p-4 transition-all h-full ${unit.status === 'Solvente'
+                                            ? 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                                            : 'bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100 hover:border-red-300 dark:hover:bg-red-900/20'
                                             }`}
                                     >
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className="text-xs font-bold text-slate-500 uppercase">Piso {unit.floor}</span>
-                                            <div className={`w-2 h-2 rounded-full ${unit.status === 'Solvente' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Piso {unit.floor}</span>
+                                            <span className={`inline-block px-1.5 border rounded-none text-[8px] font-bold uppercase tracking-widest ${unit.status === 'Solvente' ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:text-emerald-400 dark:border-emerald-800' : 'text-red-700 bg-white border-red-300 dark:bg-slate-900 dark:text-red-400 dark:border-red-800'}`}>{unit.status === 'Solvente' ? 'OK' : 'MORA'}</span>
                                         </div>
-                                        <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white mb-1 group-hover:text-primary transition-colors">{unit.number}</h3>
-                                        <p className="text-xs text-slate-500 truncate">{unit.owners?.full_name || 'Sin Propietario'}</p>
+                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors uppercase tracking-tighter">{unit.number}</h3>
+                                        <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest truncate">{unit.owners?.full_name || 'Sin Propietario'}</p>
                                     </Link>
 
-                                    {/* Action Menu - Desktop hover / Mobile tap */}
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                    {/* Action Menu - Hover */}
+                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm rounded-none">
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                                 handleEditUnit(unit);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-400 hover:text-blue-500 transition-colors"
+                                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
                                             title="Editar"
                                         >
                                             <span className="material-icons text-sm">edit</span>
@@ -251,9 +269,9 @@ const ApartmentList = () => {
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                if (confirm('¿Estás seguro de eliminar este apartamento?')) handleDeleteUnit(unit.id);
+                                                if (confirm('ELIMINACIÓN CRÍTICA: ¿Borrar del libro mayor?')) handleDeleteUnit(unit.id);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 rounded-full shadow-md text-slate-400 hover:text-red-500 transition-colors"
+                                            className="w-8 h-8 flex items-center justify-center border-l border-slate-300 dark:border-slate-700 text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-500 transition-colors"
                                             title="Eliminar"
                                         >
                                             <span className="material-icons text-sm">delete</span>
@@ -268,21 +286,21 @@ const ApartmentList = () => {
 
             {/* Create Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                                {editingId ? 'Editar Apartamento' : 'Nuevo Apartamento'}
+                <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-none border-2 border-slate-900 dark:border-white w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-900 dark:border-white">
+                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                                {editingId ? 'Editar Unidad' : 'Nueva Unidad'}
                             </h3>
-                            <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                            <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                                 <span className="material-icons">close</span>
                             </button>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Edificio</label>
+                                <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Edificio / Torre</label>
                                 <select
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 outline-none"
+                                    className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
                                     value={tower}
                                     onChange={(e) => setTower(e.target.value)}
                                 >
@@ -293,13 +311,11 @@ const ApartmentList = () => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Piso</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Piso</label>
                                     <select
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 outline-none"
+                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
                                         value={floor}
-                                        onChange={(e) => {
-                                            setFloor(e.target.value);
-                                        }}
+                                        onChange={(e) => setFloor(e.target.value)}
                                     >
                                         <option value="PB">Planta Baja</option>
                                         <option value="1">Piso 1</option>
@@ -308,9 +324,9 @@ const ApartmentList = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Letra</label>
+                                    <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Letra</label>
                                     <select
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 outline-none"
+                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
                                         value={number}
                                         onChange={(e) => setNumber(e.target.value)}
                                     >
@@ -323,47 +339,92 @@ const ApartmentList = () => {
                                 </div>
                             </div>
 
-                            {/* Owner Selection */}
-                            <div>
-                                <label className="block text-sm font-bold mb-2 text-slate-700 dark:text-slate-300">Propietario Asignado</label>
-                                <select
-                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 outline-none"
-                                    value={ownerId || ''}
-                                    onChange={(e) => setOwnerId(e.target.value || null)}
-                                >
-                                    <option value="">-- Sin Asignar --</option>
-                                    {ownersList
-                                        .filter(owner => {
-                                            // Check if owner is assigned to any unit
-                                            const isAssigned = units.some(u => u.owner_id === owner.id);
-                                            // Show if not assigned OR if it's the owner of the unit currently being edited
-                                            return !isAssigned || (editingId && owner.id === ownerId);
-                                        })
-                                        .map(owner => (
-                                            <option key={owner.id} value={owner.id}>
-                                                {owner.full_name} {owner.doc_id ? `(${owner.doc_id})` : ''}
-                                            </option>
-                                        ))}
-                                </select>
-                                <p className="text-xs text-slate-500 mt-1">
-                                    ¿No encuentras al propietario? <Link to="/admin/propietarios" className="text-primary hover:underline">Créalo aquí primero</Link>.
-                                </p>
+                            {/* Owner Selection or Creation */}
+                            <div className="border-t border-slate-200 dark:border-slate-800 pt-4 mt-2 mb-2">
+                                <div className="flex justify-between items-center mb-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Propietario Asignado</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsNewOwner(!isNewOwner)}
+                                        className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-blue-700 transition-colors bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded cursor-pointer"
+                                    >
+                                        {isNewOwner ? 'Seleccionar Existente' : '+ Crear Nuevo'}
+                                    </button>
+                                </div>
+
+                                {isNewOwner ? (
+                                    <div className="space-y-3 bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-200 dark:border-slate-700">
+                                        <div>
+                                            <input
+                                                type="text"
+                                                required={isNewOwner}
+                                                placeholder="Nombre Completo *"
+                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
+                                                value={newOwnerData.full_name}
+                                                onChange={(e) => setNewOwnerData({ ...newOwnerData, full_name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <input
+                                                type="text"
+                                                placeholder="Cédula / ID"
+                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
+                                                value={newOwnerData.doc_id}
+                                                onChange={(e) => setNewOwnerData({ ...newOwnerData, doc_id: e.target.value })}
+                                            />
+                                            <input
+                                                type="tel"
+                                                placeholder="Teléfono (Opc.)"
+                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm transition-colors"
+                                                value={newOwnerData.phone}
+                                                onChange={(e) => setNewOwnerData({ ...newOwnerData, phone: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <input
+                                                type="email"
+                                                placeholder="Email (Opc.)"
+                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm transition-colors"
+                                                value={newOwnerData.email}
+                                                onChange={(e) => setNewOwnerData({ ...newOwnerData, email: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <select
+                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors cursor-pointer"
+                                        value={ownerId || ''}
+                                        onChange={(e) => setOwnerId(e.target.value || null)}
+                                    >
+                                        <option value="">-- Sin Asignar --</option>
+                                        {ownersList
+                                            .filter(owner => {
+                                                const isAssigned = units.some(u => u.owner_id === owner.id);
+                                                return !isAssigned || (editingId && owner.id === ownerId);
+                                            })
+                                            .map(owner => (
+                                                <option key={owner.id} value={owner.id}>
+                                                    {owner.full_name} {owner.doc_id ? `(${owner.doc_id})` : ''}
+                                                </option>
+                                            ))}
+                                    </select>
+                                )}
                             </div>
 
-                            <div className="pt-4 flex gap-3">
+                            <div className="pt-6 flex gap-3 border-t border-slate-200 dark:border-slate-800 mt-6">
                                 <button
                                     type="button"
                                     onClick={handleCloseModal}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    className="flex-1 px-4 py-3 mt-4 rounded-none font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 border-2 border-slate-300 dark:border-slate-700 hover:border-slate-900 dark:hover:border-white hover:text-slate-900 dark:hover:text-white transition-colors"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={creating}
-                                    className="flex-1 px-4 py-3 rounded-xl font-bold bg-primary text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                    className="flex-1 px-4 py-3 mt-4 rounded-none font-bold text-xs uppercase tracking-widest bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 border-2 border-slate-900 dark:border-white transition-all disabled:opacity-50"
                                 >
-                                    {creating ? 'Guardando...' : (editingId ? 'Actualizar' : 'Crear Apartamento')}
+                                    {creating ? 'Guardando...' : (editingId ? 'Actualizar' : 'Registrar')}
                                 </button>
                             </div>
                         </form>
@@ -372,46 +433,48 @@ const ApartmentList = () => {
             )}
             {/* Tower Management Modal */}
             {showTowerModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
+                <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-none border-2 border-slate-900 dark:border-white w-full max-w-lg p-6 shadow-none">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-900 dark:border-white">
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Configuración de Torres</h3>
-                                <p className="text-sm text-slate-500">Habilita o deshabilita la visibilidad en el sistema.</p>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest">Configuración de Torres</h3>
+                                <p className="text-xs text-slate-500 font-mono mt-1">Habilita o deshabilita la visibilidad.</p>
                             </div>
-                            <button onClick={() => setShowTowerModal(false)} className="text-slate-400 hover:text-slate-600">
+                            <button onClick={() => setShowTowerModal(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white">
                                 <span className="material-icons">close</span>
                             </button>
                         </div>
 
-                        <div className="space-y-3 max-h-[60vh] overflow-auto pr-2">
-                            {towers.map(t => (
-                                <div key={t.name} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold ${t.is_active ? 'bg-primary/10 text-primary' : 'bg-slate-200 text-slate-400'}`}>
+                        <div className="space-y-px border border-slate-300 dark:border-slate-700 bg-slate-300 dark:bg-slate-700 max-h-[60vh] overflow-y-auto">
+                            {towers && towers.length > 0 ? towers.map(t => (
+                                <div key={t.name} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-transparent">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 flex items-center justify-center border-2 border-slate-900 dark:border-white rounded-none font-bold text-xl uppercase tracking-widest ${t.is_active ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-transparent text-slate-400 border-slate-300 dark:border-slate-700'}`}>
                                             {t.name}
                                         </div>
                                         <div>
-                                            <span className="font-bold text-slate-900 dark:text-white">{t.name}</span>
-                                            <p className="text-xs text-slate-500">{t.is_active ? 'Habilitada' : 'Deshabilitada'}</p>
+                                            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-sm">Registro {t.name}</span>
+                                            <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">{t.is_active ? 'Visible en Matriz' : 'Suspensión Oculta'}</p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => toggleTowerStatus(t.name, t.is_active)}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${t.is_active ? 'bg-primary' : 'bg-slate-300'}`}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-none border-2 border-slate-900 dark:border-white transition-colors cursor-pointer ${t.is_active ? 'bg-slate-900 dark:bg-white' : 'bg-transparent'}`}
                                     >
-                                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${t.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        <span className={`inline-block h-4 w-4 transform bg-white dark:bg-slate-900 border border-slate-900 transition-transform ${t.is_active ? 'translate-x-6' : 'translate-x-0 border-transparent dark:bg-white'}`} />
                                     </button>
                                 </div>
-                            ))}
+                            )) : (
+                                <div className="p-4 bg-white dark:bg-slate-900 text-center text-slate-500 font-mono text-xs uppercase font-bold text-[10px]">Cargando torres...</div>
+                            )}
                         </div>
 
-                        <div className="mt-8">
+                        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
                             <button
                                 onClick={() => setShowTowerModal(false)}
-                                className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert border-2 border-slate-900 dark:border-white transition-all cursor-pointer"
                             >
-                                Listo
+                                Guardar y Cerrar
                             </button>
                         </div>
                     </div>
