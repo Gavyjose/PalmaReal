@@ -366,9 +366,9 @@ const UnitDetail = () => {
                             <h3 className="font-mono font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">Afectaciones Financieras</h3>
                             <span className="text-[10px] font-mono font-bold text-slate-500 tracking-widest uppercase bg-white dark:bg-slate-900 px-2 py-1 border border-slate-300 dark:border-slate-700">{financials.history.length} CARGOS</span>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
                             <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-100 dark:bg-slate-800/50">
+                                <thead className="bg-slate-100 dark:bg-slate-800/90 backdrop-blur-xl sticky top-0 z-20 shadow-sm">
                                     <tr className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold border-b border-slate-300 dark:border-slate-700">
                                         <th className="px-6 py-4">Concepto Operativo</th>
                                         <th className="px-6 py-4 text-right">Monto Global</th>
@@ -440,9 +440,9 @@ const UnitDetail = () => {
                             <h3 className="font-mono font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">Movimientos Transaccionales</h3>
                             <span className="text-[10px] font-mono font-bold text-slate-500 tracking-widest uppercase bg-white dark:bg-slate-900 px-2 py-1 border border-slate-300 dark:border-slate-700">{financials.payments?.length || 0} ABONOS</span>
                         </div>
-                        <div className="overflow-x-auto">
+                        <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
                             <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-100 dark:bg-slate-800/50">
+                                <thead className="bg-slate-100 dark:bg-slate-800/90 backdrop-blur-xl sticky top-0 z-20 shadow-sm">
                                     <tr className="text-[10px] uppercase tracking-widest text-slate-500 font-mono font-bold border-b border-slate-300 dark:border-slate-700">
                                         <th className="px-6 py-4">F. Valor</th>
                                         <th className="px-6 py-4">Traza Auditoría</th>

@@ -184,67 +184,92 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="p-4 lg:p-8 space-y-8 animate-fade-in max-w-[1600px] mx-auto w-full">
-            {/* Header with Switcher */}
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-black uppercase tracking-tighter text-slate-900 dark:text-white">
-                        Hub Analítico <span className="text-primary italic">Palma Real</span>
-                    </h1>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <span className="material-icons text-xs">auto_graph</span>
-                        Visualización de Rendimiento en Tiempo Real
-                    </p>
+        <div className="p-6 lg:p-10 space-y-10 animate-in fade-in duration-700 max-w-[1700px] mx-auto w-full pb-20">
+            {/* Header: Social VIVO Style */}
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-full blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
+                    <div className="relative space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <span className="material-icons text-white text-2xl">analytics</span>
+                            </div>
+                            <div>
+                                <h1 className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                                    Centro de <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">Mando</span>
+                                </h1>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-widest">Live Connect</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Gestión Social VIVO</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-sm border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center bg-white dark:bg-slate-900/50 backdrop-blur-md p-1.5 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
                     <button
                         onClick={() => setViewMode('general')}
-                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'general' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.1em] transition-all flex items-center gap-2 ${viewMode === 'general' ? 'bg-gradient-to-r from-emerald-800 to-emerald-950 dark:from-emerald-400 dark:to-teal-500 text-white dark:text-slate-900 shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
-                        Visión General
+                        <span className="material-icons text-sm">dashboard</span>
+                        Global
                     </button>
                     <button
                         onClick={() => setViewMode('individual')}
-                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'individual' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.1em] transition-all flex items-center gap-2 ${viewMode === 'individual' ? 'bg-gradient-to-r from-emerald-800 to-emerald-950 dark:from-emerald-400 dark:to-teal-500 text-white dark:text-slate-900 shadow-lg' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                     >
-                        Visión Individual
+                        <span className="material-icons text-sm">person</span>
+                        Unidad
                     </button>
                 </div>
             </div>
 
-            {/* Selectors Bar */}
-            <div className="flex flex-wrap gap-4 items-center bg-white dark:bg-slate-900 p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex flex-col gap-1">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Torre de Control</span>
-                    <select
-                        value={selectedTower}
-                        onChange={(e) => {
-                            setSelectedTower(e.target.value);
-                            setLastSelectedTower(e.target.value);
-                            setSelectedUnitId(null);
-                        }}
-                        className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs p-2 focus:outline-none"
-                    >
-                        <option value="Todas las Torres">Global (Todas las Torres)</option>
-                        {activeTowers.map(t => <option key={t.id} value={t.name}>Torre {t.name}</option>)}
-                    </select>
+            {/* Selectors Bar: Social Card Style */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none">
+                <div className="lg:col-span-3 space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Seleccionar Torre</label>
+                    <div className="relative group">
+                        <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-emerald-500 transition-colors">apartment</span>
+                        <select
+                            value={selectedTower}
+                            onChange={(e) => {
+                                setSelectedTower(e.target.value);
+                                setLastSelectedTower(e.target.value);
+                                setSelectedUnitId(null);
+                            }}
+                            className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-bold text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer"
+                        >
+                            <option value="Todas las Torres">Todas las Torres</option>
+                            {activeTowers.map(t => <option key={t.id} value={t.name}>Torre {t.name}</option>)}
+                        </select>
+                        <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                    </div>
                 </div>
 
-                {viewMode === 'individual' && (
-                    <div className="flex flex-col gap-1 flex-1 max-w-sm">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Buscar Apartamento</span>
-                        <div className="relative">
+                <div className={`lg:col-span-5 transition-all duration-500 ${viewMode === 'individual' ? 'opacity-100 scale-100' : 'opacity-30 pointer-events-none scale-95 blur-[2px]'}`}>
+                    <div className="space-y-2">
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Buscar Apartamento</label>
+                        <div className="relative group">
+                            <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-emerald-500 transition-colors">search</span>
                             <input
                                 type="text"
-                                placeholder="Ej: PH-A o Nombre..."
+                                placeholder="Escribe el nro de apto o nombre..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono font-bold text-xs p-2 pl-8 focus:outline-none"
+                                className="w-full pl-11 pr-12 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-bold text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
                             />
-                            <span className="material-icons absolute left-2 top-1/2 -translate-y-1/2 text-sm text-slate-400">search</span>
-                            {searchTerm && filteredUnits.length > 0 && !selectedUnitId && (
-                                <div className="absolute top-full left-0 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 z-50 max-h-48 overflow-y-auto shadow-xl">
+                            {selectedUnitId && (
+                                <button
+                                    onClick={() => { setSelectedUnitId(null); setSearchTerm(''); }}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 hover:text-red-500 flex items-center justify-center transition-all"
+                                >
+                                    <span className="material-icons text-xs">close</span>
+                                </button>
+                            )}
+                            {searchTerm && filteredUnits.length > 0 && !selectedUnitId && viewMode === 'individual' && (
+                                <div className="absolute top-full left-0 w-full mt-3 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 z-50 max-h-64 overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.15)] p-2">
                                     {filteredUnits.slice(0, 10).map(u => (
                                         <button
                                             key={u.id}
@@ -252,102 +277,164 @@ const AdminDashboard = () => {
                                                 setSelectedUnitId(u.id);
                                                 setSearchTerm(`${u.number} - ${u.owners?.full_name || ''}`);
                                             }}
-                                            className="w-full text-left p-3 hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-0"
+                                            className="w-full text-left p-4 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-all border-b border-slate-50 dark:border-slate-800 last:border-0"
                                         >
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm font-black text-slate-900 dark:text-white">{u.number}</span>
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">{u.tower}</span>
+                                                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase">Torre {u.tower}</span>
                                             </div>
-                                            <p className="text-[10px] text-slate-500 truncate">{u.owners?.full_name || 'Sin Propietario'}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{u.owners?.full_name || 'Sin Propietario'}</p>
                                         </button>
                                     ))}
                                 </div>
                             )}
-                            {selectedUnitId && (
-                                <button
-                                    onClick={() => { setSelectedUnitId(null); setSearchTerm(''); }}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
-                                >
-                                    <span className="material-icons text-sm">close</span>
-                                </button>
-                            )}
                         </div>
                     </div>
-                )}
+                </div>
 
-                <div className="ml-auto flex items-center gap-6">
+                <div className="lg:col-span-4 flex items-center justify-end gap-10">
                     <div className="flex flex-col text-right">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Tasa BCV Ofic.</span>
-                        <span className={`flex items-center gap-1.5 justify-end ${bcvStatus.color}`}>
-                            <span className="material-icons text-[10px]">{bcvStatus.icon}</span>
-                            <span className="text-[10px] font-mono font-black uppercase tracking-tight">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Tasa Oficial BCV</span>
+                        <div className={`flex items-center gap-2 justify-end mt-1 ${bcvStatus.color}`}>
+                            <div className={`w-2 h-2 rounded-full animate-pulse ${bcvStatus.upToDate ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                            <span className="text-xl font-black tracking-tighter leading-none">
                                 {bcvStatus.label}
                             </span>
-                        </span>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col text-right border-l border-slate-200 dark:border-slate-800 pl-6">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Status del Sistema</span>
-                        <span className="flex items-center gap-1 justify-end">
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
-                            <span className="text-[10px] font-mono font-black text-slate-700 dark:text-slate-300">ACTIVO</span>
-                        </span>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden group cursor-help shadow-inner">
+                        <div className="absolute inset-0 bg-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <span className="material-icons text-emerald-500 text-2xl animate-pulse">verified_user</span>
                     </div>
                 </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* KPI Cards: Social VIVO Gradient Style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {viewMode === 'general' ? (
                     <>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-slate-900 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Recaudado</p>
-                            <h3 className="text-2xl font-black font-mono text-slate-900 dark:text-white">$ {formatNumber(metrics.totalCollected)}</h3>
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                    <span className="material-icons text-3xl">account_balance_wallet</span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recaudado</p>
+                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">Entrada de Capital</p>
+                                </div>
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">$ {formatNumber(metrics?.totalCollected || 0)}</h3>
                             <div className="mt-4 flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-sm uppercase tracking-tighter">Histórico</span>
+                                <div className="flex -space-x-2">
+                                    {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-emerald-100 flex items-center justify-center"><span className="material-icons text-[10px] text-emerald-500">check</span></div>)}
+                                </div>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Liquidado</span>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-red-500 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Cartera Morosa</p>
-                            <h3 className="text-2xl font-black font-mono text-red-600 dark:text-red-500">$ {formatNumber(metrics.totalDebt)}</h3>
-                            <p className="text-[9px] font-bold text-slate-500 mt-2 uppercase">Facturación bruta acumulada</p>
-                        </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-primary p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Eficiencia de Cobro</p>
-                            <h3 className="text-2xl font-black font-mono text-slate-900 dark:text-white">{metrics.recoveryRate.toFixed(1)}%</h3>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 mt-4">
-                                <div className="bg-primary h-full transition-all duration-1000" style={{ width: `${metrics.recoveryRate}%` }}></div>
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                    <span className="material-icons text-3xl">hourglass_empty</span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pendiente</p>
+                                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-tighter">Cuentas por Cobrar</p>
+                                </div>
+                            </div>
+                            <h3 className="text-4xl font-black text-amber-600 dark:text-amber-500 tracking-tighter">$ {formatNumber(metrics?.totalDebt || 0)}</h3>
+                            <div className="mt-4 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 text-[9px] font-black uppercase tracking-widest">En Gestión</span>
                             </div>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-slate-400 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Unidades Registradas</p>
-                            <h3 className="text-2xl font-black font-mono text-slate-900 dark:text-white">{metrics.totalUnits}</h3>
-                            <p className="text-[9px] font-bold text-slate-500 mt-2 uppercase">Base de datos de {selectedTower}</p>
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600">
+                                    <span className="material-icons text-3xl">trending_up</span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salud Financiera</p>
+                                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-tighter">Ratio de Éxito</p>
+                                </div>
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{(metrics?.recoveryRate || 0).toFixed(1)}%</h3>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden p-0.5">
+                                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-1000" style={{ width: `${metrics?.recoveryRate || 0}%` }}></div>
+                            </div>
+                        </div>
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white">
+                                    <span className="material-icons text-3xl">apartment</span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Unidades</p>
+                                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{selectedTower}</p>
+                                </div>
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{metrics?.totalUnits || 0}</h3>
+                            <div className="mt-4 flex items-center gap-2">
+                                <span className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Activas</span>
+                            </div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-slate-900 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saldo Actual</p>
-                            <h3 className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white">
+                                    <span className="material-icons text-3xl">receipt_long</span>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Exigible</p>
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
                                 {unitMetrics ? `$ ${formatNumber(unitMetrics.history.reduce((s, h) => s + (h.deuda - h.pago), 0))}` : '--'}
                             </h3>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-emerald-500 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Pagado</p>
-                            <h3 className="text-2xl font-black font-mono text-emerald-600">
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                    <span className="material-icons text-3xl">payments</span>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Histórico Pagos</p>
+                            </div>
+                            <h3 className="text-4xl font-black text-emerald-600 tracking-tighter">
                                 {unitMetrics ? `$ ${formatNumber(unitMetrics.history.reduce((s, h) => s + h.pago, 0))}` : '--'}
                             </h3>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-amber-500 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Cumplimiento</p>
-                            <h3 className="text-2xl font-black font-mono text-amber-600">
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
+                                    <span className="material-icons text-3xl">verified</span>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cumplimiento</p>
+                            </div>
+                            <h3 className="text-4xl font-black text-teal-600 tracking-tighter">
                                 {unitMetrics ? `${((unitMetrics.history.filter(h => h.pago >= h.deuda - 0.05).length / unitMetrics.history.length) * 100 || 0).toFixed(0)}%` : '--'}
                             </h3>
                         </div>
-                        <div className="bg-white dark:bg-slate-900 border-l-4 border-slate-400 p-6 shadow-sm border border-slate-200 dark:border-slate-800">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Antigüedad</p>
-                            <h3 className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+
+                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                                    <span className="material-icons text-3xl">history</span>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período Inicio</p>
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
                                 {unitMetrics ? (unitMetrics.history.length > 0 ? unitMetrics.history[0].name.split(' ')[1] : '--') : '--'}
                             </h3>
                         </div>
@@ -355,72 +442,87 @@ const AdminDashboard = () => {
                 )}
             </div>
 
-            {/* Charts Section */}
-            <div className="grid grid-cols-1 gap-8">
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-8">
-                        <h4 className="font-black uppercase tracking-widest text-sm text-slate-900 dark:text-white border-b-2 border-primary pb-1">
-                            {viewMode === 'general' ? 'Tendencia Financiera Consolidada' : 'Historial de Pagos de la Unidad'}
-                        </h4>
-                        <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">
-                            {viewMode === 'general' ? 'Ingresos vs Gastos' : 'Alícuotas vs Pagos'}
-                        </span>
+            {/* Charts Section: Social Board Style */}
+            <div className="grid grid-cols-1 gap-10">
+                <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl rounded-[3rem] border border-white dark:border-slate-800 p-10 shadow-3xl shadow-slate-200/50 dark:shadow-none">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+                        <div className="space-y-1">
+                            <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                                <div className="w-2 h-8 bg-emerald-600 rounded-full"></div>
+                                {viewMode === 'general' ? 'Dinámica Financiera Histórica' : `Análisis: Apartamento ${unitMetrics?.unit?.number}`}
+                            </h4>
+                            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 px-5">
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Recaudado</div>
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-400"></span> Gastos Reales</div>
+                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Meta Proyectada</div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                            {['12M', '6M', '3M'].map(t => <button key={t} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${t === '12M' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{t}</button>)}
+                        </div>
                     </div>
 
-                    <div className="h-[400px] w-full mt-4">
+                    <div className="h-[450px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             {viewMode === 'general' ? (
                                 <AreaChart data={metrics?.chartData}>
                                     <defs>
                                         <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
                                             <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                         </linearGradient>
                                         <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#0f172a" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#0f172a" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#64748b" stopOpacity={0.1} />
+                                            <stop offset="95%" stopColor="#64748b" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                                        tick={{ fontSize: 10, fontWeight: '900', fill: '#94a3b8' }}
+                                        dy={10}
                                     />
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                                        tick={{ fontSize: 10, fontWeight: '900', fill: '#94a3b8' }}
+                                        dx={-10}
                                         tickFormatter={(v) => `$${v}`}
                                     />
                                     <Tooltip
-                                        contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '4px', color: '#fff' }}
-                                        itemStyle={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 0' }}
+                                        cursor={{ stroke: '#10b981', strokeWidth: 2, strokeDasharray: 'none' }}
+                                        contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', padding: '1.5rem' }}
+                                        itemStyle={{ fontSize: '12px', fontWeight: '900', color: '#f8fafc', padding: '4px 0', textTransform: 'uppercase' }}
+                                        labelStyle={{ color: '#94a3b8', fontSize: '10px', fontWeight: '900', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
                                     />
-                                    <Area type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorIngresos)" name="Ingresos ($)" />
-                                    <Area type="monotone" dataKey="gastos" stroke="#0f172a" strokeWidth={3} fillOpacity={1} fill="url(#colorGastos)" name="Gastos ($)" />
+                                    <Area type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorIngresos)" name="Recaudado" />
+                                    <Area type="monotone" dataKey="gastos" stroke="#64748b" strokeWidth={4} fillOpacity={1} fill="url(#colorGastos)" name="Gastos Reales" />
+                                    <Line type="monotone" dataKey="meta" stroke="#2dd4bf" strokeWidth={2} strokeDasharray="8 8" dot={false} name="Meta Facturación" />
                                 </AreaChart>
                             ) : (
                                 <BarChart data={unitMetrics?.history}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#f1f5f9" />
                                     <XAxis
                                         dataKey="name"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                                        tick={{ fontSize: 10, fontWeight: '900', fill: '#94a3b8' }}
+                                        dy={10}
                                     />
                                     <YAxis
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }}
+                                        tick={{ fontSize: 10, fontWeight: '900', fill: '#94a3b8' }}
+                                        dx={-10}
                                     />
                                     <Tooltip
-                                        cursor={{ fill: '#f8fafc' }}
-                                        contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '4px', color: '#fff' }}
+                                        cursor={{ fill: '#f1f5f9', radius: 12 }}
+                                        contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '1.5rem', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', padding: '1.5rem' }}
                                     />
-                                    <Bar dataKey="deuda" fill="#f1f5f9" radius={[4, 4, 0, 0]} name="Cargos del Mes ($)" />
-                                    <Bar dataKey="pago" fill="#10b981" radius={[4, 4, 0, 0]} name="Pagos Recibidos ($)" />
+                                    <Bar dataKey="deuda" fill="#cbd5e1" radius={[12, 12, 0, 0]} name="Cargos del Mes ($)" barSize={40} />
+                                    <Bar dataKey="pago" fill="#059669" radius={[12, 12, 0, 0]} name="Pagos Recibidos ($)" barSize={40} />
                                 </BarChart>
                             )}
                         </ResponsiveContainer>
@@ -428,61 +530,94 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Bottom Insight Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-slate-900 dark:bg-slate-100 p-8 flex flex-col justify-between border-b-8 border-primary relative overflow-hidden">
-                    <div className="relative z-10">
-                        <h5 className="text-white dark:text-slate-900 font-black uppercase tracking-widest text-xl mb-2">Proyectar Reporte Anual</h5>
-                        <p className="text-slate-400 dark:text-slate-500 font-mono text-sm max-w-md">
-                            Genera una simulación del flujo de caja estimado basado en el comportamiento histórico de los últimos 12 meses.
-                        </p>
+            {/* Bottom Insight Row: Premium Social Design */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div className="lg:col-span-2 group relative overflow-hidden bg-slate-900 rounded-[3rem] p-12 flex flex-col justify-between border-slate-800 transition-all hover:shadow-[0_40px_100px_rgba(0,0,0,0.3)]">
+                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_-20%,#3b82f620,transparent)]"></div>
+                    <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-10">
+                        <div className="space-y-4">
+                            <h5 className="text-white font-black uppercase tracking-tight text-3xl max-w-sm leading-tight">
+                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Recaudado VIVO</span>
+                            </h5>
+                            <p className="text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
+                                Ejecuta proyecciones de flujo inteligente para el mes de {data?.periods?.[0]?.period_name.split(' ')[1] || 'siguiente período'} basadas en patrones de pago históricos.
+                            </p>
+                            <div className="flex gap-4 pt-4">
+                                <button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-10 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center gap-3 shadow-2xl shadow-emerald-600/30 active:scale-95">
+                                    Simular Proyección
+                                    <span className="material-icons text-sm">rocket_launch</span>
+                                </button>
+                                <button className="px-8 py-5 rounded-3xl border border-slate-700 text-slate-300 font-black uppercase tracking-[0.1em] text-[10px] hover:bg-slate-800 transition-all active:scale-95">
+                                    Auditar Datos
+                                </button>
+                            </div>
+                        </div>
+                        <div className="hidden md:flex flex-1 justify-end">
+                            <div className="w-56 h-56 rounded-[3rem] bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 flex flex-col justify-between relative shadow-2xl skew-x-3 -rotate-3 transition-transform group-hover:rotate-0">
+                                <span className="material-icons text-emerald-500 text-4xl">auto_awesome</span>
+                                <div>
+                                    <p className="text-white font-black text-2xl tracking-tighter">$ {formatNumber(metrics?.totalExpected || 0)}</p>
+                                    <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mt-1">META DE CIERRE</p>
+                                </div>
+                                <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20">
+                                    <span className="material-icons text-sm">trending_up</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <button className="mt-8 bg-primary hover:bg-primary/90 text-white px-8 py-3 font-black uppercase tracking-[0.2em] text-[10px] w-max transition-all">
-                        Generar Proyección
-                    </button>
-                    <span className="material-icons absolute -right-8 -bottom-8 text-white/5 text-[200px] select-none pointer-events-none">auto_graph</span>
+                    <span className="material-icons absolute -right-16 -bottom-16 text-white/[0.03] text-[350px] select-none pointer-events-none rotate-12">insights</span>
                 </div>
 
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 flex flex-col gap-4">
-                    <h5 className="font-black uppercase tracking-widest text-xs text-slate-400">Distribución de Cartera</h5>
-                    <div className="h-[200px] relative">
+                <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white dark:border-slate-800 p-10 rounded-[3rem] shadow-2xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
+                    <h5 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-8 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                        Distribución de Salud
+                    </h5>
+
+                    <div className="h-[220px] relative">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
                                     data={[
                                         { name: 'Solvente', value: metrics?.recoveryRate || 0 },
-                                        { name: 'Deudor', value: 100 - (metrics?.recoveryRate || 0) },
+                                        { name: 'Pendiente', value: 100 - (metrics?.recoveryRate || 0) },
                                     ]}
-                                    innerRadius={50}
-                                    outerRadius={80}
-                                    paddingAngle={5}
+                                    innerRadius={70}
+                                    outerRadius={95}
+                                    paddingAngle={8}
                                     dataKey="value"
+                                    stroke="none"
                                 >
-                                    <Cell fill="#10b981" />
-                                    <Cell fill="#ef4444" />
+                                    <Cell fill="#10b981" className="drop-shadow-lg" />
+                                    <Cell fill="#ef4444" opacity={0.3} className="drop-shadow-lg" />
                                 </Pie>
-                                <Tooltip />
+                                <Tooltip
+                                    contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '1rem', color: '#fff' }}
+                                    itemStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}
+                                />
                             </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                            <span className="block text-xl font-black font-mono text-slate-900 dark:text-white">{metrics?.recoveryRate.toFixed(0)}%</span>
-                            <span className="text-[8px] font-black uppercase text-slate-400 tracking-tighter">COBRO</span>
+                            <span className="block text-4xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">{(metrics?.recoveryRate || 0).toFixed(0)}%</span>
+                            <span className="text-[9px] font-black uppercase text-slate-400 tracking-widest mt-1 block">Cobrado</span>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Recaudación Lograda</span>
+
+                    <div className="space-y-4 mt-8">
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 transition-transform hover:scale-105">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-500 flex items-center justify-center text-white"><span className="material-icons text-sm">payments</span></div>
+                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">Liquidado</span>
                             </div>
-                            <span className="text-[10px] font-mono font-bold text-slate-900 dark:text-white">$ {formatNumber(metrics?.totalCollected)}</span>
+                            <span className="text-xs font-black text-emerald-600 dark:text-emerald-500">$ {formatNumber(metrics?.totalCollected)}</span>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Cartera Pendiente</span>
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 transition-transform hover:scale-105">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-amber-500 flex items-center justify-center text-white"><span className="material-icons text-sm">history_toggle_off</span></div>
+                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-widest">Deuda</span>
                             </div>
-                            <span className="text-[10px] font-mono font-bold text-slate-900 dark:text-white">$ {formatNumber(metrics?.totalDebt)}</span>
+                            <span className="text-xs font-black text-amber-600 dark:text-amber-500">$ {formatNumber(metrics?.totalDebt)}</span>
                         </div>
                     </div>
                 </div>

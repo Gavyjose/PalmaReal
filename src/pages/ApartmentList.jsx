@@ -171,96 +171,147 @@ const ApartmentList = () => {
     const sortedFloors = Object.keys(unitsByFloor).sort((a, b) => floorOrder[a] - floorOrder[b]);
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-                <div>
-                    <nav className="flex text-slate-500 text-[10px] font-mono font-bold uppercase tracking-widest mb-2 items-center gap-2">
-                        <Link to="/admin" className="hover:text-slate-900 dark:hover:text-white transition-colors">Inicio</Link>
-                        <span>/</span>
-                        <span className="text-slate-900 dark:text-white">Apartamentos</span>
-                    </nav>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Directorio de Apartamentos</h1>
-                    <p className="text-slate-500 text-sm mt-1 font-mono">Maestro de unidades y asignación de deudas.</p>
+        <div className="max-w-[1600px] mx-auto p-4 lg:p-8 pb-32 font-display">
+            {/* Header - Social VIVO Premium */}
+            <div className="relative mb-12 animate-fade-in text-left">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 relative z-10">
+                    <div className="space-y-4">
+                        <nav className="flex items-center gap-3 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">
+                            <Link to="/admin" className="hover:text-emerald-500 transition-colors">Inicio</Link>
+                            <span className="material-icons text-[10px]">chevron_right</span>
+                            <span className="text-emerald-500">Comunidad</span>
+                            <span className="material-icons text-[10px]">chevron_right</span>
+                            <span className="text-slate-900 dark:text-white">Apartamentos</span>
+                        </nav>
+                        <div className="flex items-center gap-6">
+                            <div className="w-2 h-12 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-full shadow-lg shadow-emerald-500/20"></div>
+                            <div>
+                                <h1 className="text-5xl font-display-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none mb-2">
+                                    Directorio <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-600">Unidades</span>
+                                </h1>
+                                <p className="text-xs font-display-medium text-slate-500 uppercase tracking-[0.3em]">Maestro de Inmuebles y Asignación</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowTowerModal(true)}
+                            className="group relative px-6 py-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 text-slate-900 dark:text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all active:scale-95 flex items-center gap-2"
+                        >
+                            <span className="material-icons text-lg">settings</span>
+                            <span>Torres</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                setEditingId(null);
+                                setTower(selectedTower);
+                                setFloor('PB');
+                                setNumber('');
+                                setShowModal(true);
+                            }}
+                            className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
+                        >
+                            <span className="material-icons text-lg">add_location</span>
+                            <span>Nueva Unidad</span>
+                        </button>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setShowTowerModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 rounded-none font-bold text-xs uppercase tracking-widest hover:border-slate-900 dark:hover:border-white transition-colors"
-                    >
-                        <span className="material-icons text-sm">settings</span>
-                        Configurar
-                    </button>
-                    <button
-                        onClick={() => {
-                            setEditingId(null);
-                            setTower(selectedTower);
-                            setFloor('PB');
-                            setNumber('');
-                            setShowModal(true);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert transition-all cursor-pointer border-2 border-transparent"
-                    >
-                        <span className="material-icons text-sm">add</span>
-                        Nueva Unidad
-                    </button>
+                {/* Decorative background element */}
+                <div className="absolute -top-10 -left-10 w-64 h-64 bg-emerald-500/5 blur-[100px] -z-10 rounded-full"></div>
+            </div>
+
+            {/* Tower Selection - Social Tab System */}
+            <div className="relative mb-12 group/tabs animate-fade-in text-left">
+                <div className="absolute inset-0 bg-emerald-500/5 blur-3xl opacity-0 group-hover/tabs:opacity-100 transition-opacity"></div>
+                <div className="relative flex flex-wrap gap-2 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-2 shadow-2xl overflow-hidden">
+                    {activeTowers.map(t => (
+                        <button
+                            key={t.name}
+                            onClick={() => {
+                                setSelectedTower(t.name);
+                                setLastSelectedTower(t.name);
+                            }}
+                            className={`px-8 py-3 rounded-2xl font-display-black text-[10px] uppercase tracking-[0.25em] transition-all relative overflow-hidden ${selectedTower === t.name
+                                ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg shadow-emerald-500/30'
+                                : 'text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/5'
+                                }`}
+                        >
+                            {selectedTower === t.name && (
+                                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                            )}
+                            <span className="relative z-10">Torre {t.name}</span>
+                        </button>
+                    ))}
                 </div>
             </div>
 
-            {/* Tower Selection */}
-            <div className="flex flex-wrap gap-0 mb-8 border-b-2 border-slate-300 dark:border-slate-700">
-                {activeTowers.map(t => (
-                    <button
-                        key={t.name}
-                        onClick={() => {
-                            setSelectedTower(t.name);
-                            setLastSelectedTower(t.name);
-                        }}
-                        className={`px-6 py-3 rounded-none font-bold text-xs font-mono uppercase tracking-widest transition-all ${selectedTower === t.name
-                            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-2 border-slate-900 dark:border-white border-b-0 -mb-[2px]'
-                            : 'bg-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border-b-2 border-transparent hover:border-slate-400 -mb-[2px]'
-                            }`}
-                    >
-                        Torre {t.name}
-                    </button>
-                ))}
-            </div>
-
-            {/* Grid of Apartments */}
+            {/* Grid of Apartments - Social Board Style */}
             {loading ? (
-                <div className="text-center py-20 text-slate-500 font-mono font-bold uppercase tracking-widest text-xs">Sincronizando maestro de unidades...</div>
+                <div className="flex flex-col items-center justify-center py-32 space-y-4">
+                    <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-display-black uppercase tracking-[0.3em] text-slate-400">Sincronizando Unidades...</p>
+                </div>
             ) : sortedFloors.length === 0 ? (
-                <div className="text-center py-20 text-slate-500 font-mono font-bold uppercase tracking-widest text-xs">- Sin Apartamentos Registrados -</div>
+                <div className="flex flex-col items-center justify-center py-32 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem]">
+                    <span className="material-icons text-6xl text-slate-300 mb-4">location_off</span>
+                    <p className="text-[10px] font-display-black uppercase tracking-[0.3em] text-slate-400">- Sin Unidades Registradas -</p>
+                </div>
             ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-px border border-slate-300 dark:border-slate-700 bg-slate-300 dark:bg-slate-700 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6 animate-fade-in">
                     {sortedFloors.map(floor => (
                         <React.Fragment key={floor}>
                             {unitsByFloor[floor].map((unit) => (
-                                <div key={unit.id} className="relative group bg-white dark:bg-slate-900 border border-transparent">
+                                <div key={unit.id} className="group relative">
                                     <Link
                                         to={`/admin/apartamentos/${unit.id}`}
-                                        className={`block p-4 transition-all h-full ${unit.status === 'Solvente'
-                                            ? 'hover:bg-slate-50 dark:hover:bg-slate-800'
-                                            : 'bg-red-50/50 dark:bg-red-900/10 hover:bg-red-100 hover:border-red-300 dark:hover:bg-red-900/20'
+                                        className={`block relative overflow-hidden rounded-[2rem] border transition-all duration-500 h-full ${unit.status === 'Solvente'
+                                            ? 'bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-white/20 dark:border-white/5 hover:border-emerald-500/50 hover:shadow-2xl hover:shadow-emerald-500/10'
+                                            : 'bg-red-500/5 backdrop-blur-xl border-red-500/20 hover:border-red-500/50 hover:shadow-2xl hover:shadow-red-500/10'
                                             }`}
                                     >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Piso {unit.floor}</span>
-                                            <span className={`inline-block px-1.5 border rounded-none text-[8px] font-bold uppercase tracking-widest ${unit.status === 'Solvente' ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/10 dark:text-emerald-400 dark:border-emerald-800' : 'text-red-700 bg-white border-red-300 dark:bg-slate-900 dark:text-red-400 dark:border-red-800'}`}>{unit.status === 'Solvente' ? 'OK' : 'MORA'}</span>
+                                        <div className="p-6">
+                                            <div className="flex justify-between items-center mb-6">
+                                                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                                                    <span className="text-[9px] font-display-black text-slate-500 uppercase tracking-widest">NIVEL {unit.floor}</span>
+                                                </div>
+                                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-lg ${unit.status === 'Solvente'
+                                                    ? 'bg-emerald-500/10 text-emerald-500'
+                                                    : 'bg-red-500/10 text-red-500'}`}>
+                                                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${unit.status === 'Solvente' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                                                    <span className="text-[9px] font-display-black uppercase tracking-widest">{unit.status === 'Solvente' ? 'VIVO' : 'MORA'}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-4">
+                                                <h3 className="text-4xl font-display-black text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors uppercase tracking-tighter">
+                                                    {unit.number}
+                                                </h3>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center overflow-hidden">
+                                                    <span className="material-icons text-[12px] text-slate-500 dark:text-slate-400">person</span>
+                                                </div>
+                                                <p className="text-[10px] font-display-bold text-slate-500 uppercase tracking-wider truncate max-w-[120px]">
+                                                    {unit.owners?.full_name || 'Sin Asignar'}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-1 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors uppercase tracking-tighter">{unit.number}</h3>
-                                        <p className="text-[10px] font-mono font-bold text-slate-500 uppercase tracking-widest truncate">{unit.owners?.full_name || 'Sin Propietario'}</p>
+
+                                        {/* Hover Overlay Gradient */}
+                                        <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
                                     </Link>
 
-                                    {/* Action Menu - Hover */}
-                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm rounded-none">
+                                    {/* Premium Action Menu */}
+                                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                                         <button
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
                                                 handleEditUnit(unit);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                            className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-lg active:scale-90"
                                             title="Editar"
                                         >
                                             <span className="material-icons text-sm">edit</span>
@@ -269,9 +320,9 @@ const ApartmentList = () => {
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                if (confirm('ELIMINACIÓN CRÍTICA: ¿Borrar del libro mayor?')) handleDeleteUnit(unit.id);
+                                                if (confirm('¿ELIMINAR UNIDAD?')) handleDeleteUnit(unit.id);
                                             }}
-                                            className="w-8 h-8 flex items-center justify-center border-l border-slate-300 dark:border-slate-700 text-slate-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-500 transition-colors"
+                                            className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-lg active:scale-90"
                                             title="Eliminar"
                                         >
                                             <span className="material-icons text-sm">delete</span>
@@ -284,197 +335,248 @@ const ApartmentList = () => {
                 </div>
             )}
 
-            {/* Create Modal */}
+            {/* Create Modal - Social VIVO Premium */}
             {showModal && (
-                <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-none border-2 border-slate-900 dark:border-white w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-900 dark:border-white">
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest">
-                                {editingId ? 'Editar Unidad' : 'Nueva Unidad'}
-                            </h3>
-                            <button onClick={handleCloseModal} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                                <span className="material-icons">close</span>
-                            </button>
-                        </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Edificio / Torre</label>
-                                <select
-                                    className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
-                                    value={tower}
-                                    onChange={(e) => setTower(e.target.value)}
-                                >
-                                    {activeTowers.map(t => (
-                                        <option key={t.name} value={t.name}>{t.name}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Piso</label>
-                                    <select
-                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
-                                        value={floor}
-                                        onChange={(e) => setFloor(e.target.value)}
-                                    >
-                                        <option value="PB">Planta Baja</option>
-                                        <option value="1">Piso 1</option>
-                                        <option value="2">Piso 2</option>
-                                        <option value="3">Piso 3</option>
-                                    </select>
+                <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] border border-white/20 dark:border-white/5 w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        {/* Modal Header */}
+                        <div className="relative p-8 pb-0">
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-1.5 h-8 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-full"></div>
+                                    <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tighter">
+                                        {editingId ? 'Editar' : 'Nueva'} <span className="text-emerald-500">Unidad</span>
+                                    </h3>
                                 </div>
-                                <div>
-                                    <label className="block text-[10px] font-black uppercase tracking-widest mb-2 text-slate-500 dark:text-slate-400">Letra</label>
-                                    <select
-                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
-                                        value={number}
-                                        onChange={(e) => setNumber(e.target.value)}
-                                    >
-                                        <option value="">Seleccionar...</option>
-                                        <option value="A">A</option>
-                                        <option value="B">B</option>
-                                        <option value="C">C</option>
-                                        <option value="D">D</option>
-                                    </select>
+                                <button onClick={handleCloseModal} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-95">
+                                    <span className="material-icons">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="p-8 pt-0 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 ml-1">Edificio / Torre</label>
+                                    <div className="relative group">
+                                        <select
+                                            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 dark:focus:border-emerald-500/50 font-display-bold text-sm uppercase tracking-wider transition-all appearance-none text-slate-900 dark:text-white"
+                                            value={tower}
+                                            onChange={(e) => setTower(e.target.value)}
+                                        >
+                                            {activeTowers.map(t => (
+                                                <option key={t.name} value={t.name} className="dark:bg-slate-900">Torre {t.name}</option>
+                                            ))}
+                                        </select>
+                                        <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-emerald-500 transition-colors">expand_more</span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 ml-1">Piso</label>
+                                        <div className="relative group">
+                                            <select
+                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 dark:focus:border-emerald-500/50 font-display-bold text-sm uppercase transition-all appearance-none text-slate-900 dark:text-white"
+                                                value={floor}
+                                                onChange={(e) => setFloor(e.target.value)}
+                                            >
+                                                <option value="PB" className="dark:bg-slate-900">P. Baja</option>
+                                                <option value="1" className="dark:bg-slate-900">Piso 1</option>
+                                                <option value="2" className="dark:bg-slate-900">Piso 2</option>
+                                                <option value="3" className="dark:bg-slate-900">Piso 3</option>
+                                            </select>
+                                            <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-emerald-500 transition-colors">layers</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 ml-1">Letra</label>
+                                        <div className="relative group">
+                                            <select
+                                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 dark:focus:border-emerald-500/50 font-display-bold text-sm uppercase transition-all appearance-none text-slate-900 dark:text-white"
+                                                value={number}
+                                                onChange={(e) => setNumber(e.target.value)}
+                                            >
+                                                <option value="" className="dark:bg-slate-900">-</option>
+                                                <option value="A" className="dark:bg-slate-900">A</option>
+                                                <option value="B" className="dark:bg-slate-900">B</option>
+                                                <option value="C" className="dark:bg-slate-900">C</option>
+                                                <option value="D" className="dark:bg-slate-900">D</option>
+                                            </select>
+                                            <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-emerald-500 transition-colors">sort_by_alpha</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Owner Selection or Creation */}
-                            <div className="border-t border-slate-200 dark:border-slate-800 pt-4 mt-2 mb-2">
-                                <div className="flex justify-between items-center mb-3">
-                                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Propietario Asignado</label>
+                            {/* Owner Selection - Social Insight Style */}
+                            <div className="bg-slate-50/50 dark:bg-slate-800/50 rounded-[2rem] p-6 border border-slate-200/50 dark:border-white/5">
+                                <div className="flex justify-between items-center mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-icons text-lg text-emerald-500">assignment_ind</span>
+                                        <label className="text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Propietario Asignado</label>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setIsNewOwner(!isNewOwner)}
-                                        className="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-blue-700 transition-colors bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded cursor-pointer"
+                                        className={`px-4 py-1.5 rounded-xl text-[9px] font-display-black uppercase tracking-widest transition-all ${isNewOwner
+                                            ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                            : 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20'}`}
                                     >
                                         {isNewOwner ? 'Seleccionar Existente' : '+ Crear Nuevo'}
                                     </button>
                                 </div>
 
                                 {isNewOwner ? (
-                                    <div className="space-y-3 bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-200 dark:border-slate-700">
-                                        <div>
+                                    <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
+                                        <div className="relative group">
                                             <input
                                                 type="text"
                                                 required={isNewOwner}
                                                 placeholder="Nombre Completo *"
-                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
+                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 font-display-bold text-sm uppercase tracking-wider transition-all shadow-sm"
                                                 value={newOwnerData.full_name}
                                                 onChange={(e) => setNewOwnerData({ ...newOwnerData, full_name: e.target.value })}
                                             />
                                         </div>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <input
                                                 type="text"
                                                 placeholder="Cédula / ID"
-                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors"
+                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 font-display-bold text-sm uppercase transition-all shadow-sm"
                                                 value={newOwnerData.doc_id}
                                                 onChange={(e) => setNewOwnerData({ ...newOwnerData, doc_id: e.target.value })}
                                             />
                                             <input
                                                 type="tel"
-                                                placeholder="Teléfono (Opc.)"
-                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm transition-colors"
+                                                placeholder="Teléfono"
+                                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 font-display-bold text-sm transition-all shadow-sm"
                                                 value={newOwnerData.phone}
                                                 onChange={(e) => setNewOwnerData({ ...newOwnerData, phone: e.target.value })}
                                             />
                                         </div>
-                                        <div>
-                                            <input
-                                                type="email"
-                                                placeholder="Email (Opc.)"
-                                                className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-3 py-2 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm transition-colors"
-                                                value={newOwnerData.email}
-                                                onChange={(e) => setNewOwnerData({ ...newOwnerData, email: e.target.value })}
-                                            />
-                                        </div>
+                                        <input
+                                            type="email"
+                                            placeholder="Email institucional / personal"
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 font-display-bold text-sm transition-all shadow-sm"
+                                            value={newOwnerData.email}
+                                            onChange={(e) => setNewOwnerData({ ...newOwnerData, email: e.target.value })}
+                                        />
                                     </div>
                                 ) : (
-                                    <select
-                                        className="w-full bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 outline-none focus:border-slate-900 dark:focus:border-white font-mono text-sm uppercase transition-colors cursor-pointer"
-                                        value={ownerId || ''}
-                                        onChange={(e) => setOwnerId(e.target.value || null)}
-                                    >
-                                        <option value="">-- Sin Asignar --</option>
-                                        {ownersList
-                                            .filter(owner => {
-                                                const isAssigned = units.some(u => u.owner_id === owner.id);
-                                                return !isAssigned || (editingId && owner.id === ownerId);
-                                            })
-                                            .map(owner => (
-                                                <option key={owner.id} value={owner.id}>
-                                                    {owner.full_name} {owner.doc_id ? `(${owner.doc_id})` : ''}
-                                                </option>
-                                            ))}
-                                    </select>
+                                    <div className="relative group">
+                                        <select
+                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 outline-none focus:border-emerald-500 font-display-bold text-sm uppercase tracking-wider transition-all shadow-sm appearance-none text-slate-900 dark:text-white"
+                                            value={ownerId || ''}
+                                            onChange={(e) => setOwnerId(e.target.value || null)}
+                                        >
+                                            <option value="" className="dark:bg-slate-900">-- Sin Asignar --</option>
+                                            {ownersList
+                                                .filter(owner => {
+                                                    const isAssigned = units.some(u => u.owner_id === owner.id);
+                                                    return !isAssigned || (editingId && owner.id === ownerId);
+                                                })
+                                                .map(owner => (
+                                                    <option key={owner.id} value={owner.id} className="dark:bg-slate-900">
+                                                        {owner.full_name} {owner.doc_id ? `(${owner.doc_id})` : ''}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                        <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-emerald-500 transition-colors">search</span>
+                                    </div>
                                 )}
                             </div>
 
-                            <div className="pt-6 flex gap-3 border-t border-slate-200 dark:border-slate-800 mt-6">
+                            <div className="flex gap-4 pt-4">
                                 <button
                                     type="button"
                                     onClick={handleCloseModal}
-                                    className="flex-1 px-4 py-3 mt-4 rounded-none font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 border-2 border-slate-300 dark:border-slate-700 hover:border-slate-900 dark:hover:border-white hover:text-slate-900 dark:hover:text-white transition-colors"
+                                    className="flex-1 px-8 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl font-display-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={creating}
-                                    className="flex-1 px-4 py-3 mt-4 rounded-none font-bold text-xs uppercase tracking-widest bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 border-2 border-slate-900 dark:border-white transition-all disabled:opacity-50"
+                                    className="flex-3 px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    {creating ? 'Guardando...' : (editingId ? 'Actualizar' : 'Registrar')}
+                                    {creating ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                            <span>Guardando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="material-icons text-sm">{editingId ? 'save' : 'add_circle'}</span>
+                                            <span>{editingId ? 'Actualizar Registro' : 'Registrar Unidad'}</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
-            {/* Tower Management Modal */}
+            {/* Tower Management Modal - Social VIVO Premium */}
             {showTowerModal && (
-                <div className="fixed inset-0 bg-slate-900/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-none border-2 border-slate-900 dark:border-white w-full max-w-lg p-6 shadow-none">
-                        <div className="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-900 dark:border-white">
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-widest">Configuración de Torres</h3>
-                                <p className="text-xs text-slate-500 font-mono mt-1">Habilita o deshabilita la visibilidad.</p>
+                <div className="fixed inset-0 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[2.5rem] border border-white/20 dark:border-white/5 w-full max-w-lg shadow-2xl animate-in zoom-in-95 duration-300">
+                        {/* Modal Header */}
+                        <div className="p-8 pb-4">
+                            <div className="flex justify-between items-center mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-1.5 h-8 bg-gradient-to-b from-emerald-400 to-teal-600 rounded-full"></div>
+                                    <div>
+                                        <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tighter">Torres de <span className="text-emerald-500">Control</span></h3>
+                                        <p className="text-[9px] font-display-bold text-slate-400 uppercase tracking-widest">Habilitar visibilidad en matriz</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowTowerModal(false)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-emerald-500 hover:text-white transition-all active:scale-95">
+                                    <span className="material-icons">close</span>
+                                </button>
                             </div>
-                            <button onClick={() => setShowTowerModal(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white">
-                                <span className="material-icons">close</span>
-                            </button>
                         </div>
 
-                        <div className="space-y-px border border-slate-300 dark:border-slate-700 bg-slate-300 dark:bg-slate-700 max-h-[60vh] overflow-y-auto">
+                        <div className="p-8 pt-0 space-y-3 max-h-[50vh] overflow-y-auto custom-scrollbar">
                             {towers && towers.length > 0 ? towers.map(t => (
-                                <div key={t.name} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border-b border-transparent">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-10 h-10 flex items-center justify-center border-2 border-slate-900 dark:border-white rounded-none font-bold text-xl uppercase tracking-widest ${t.is_active ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-transparent text-slate-400 border-slate-300 dark:border-slate-700'}`}>
+                                <div key={t.name} className="flex items-center justify-between p-5 bg-slate-50 dark:bg-slate-800/40 rounded-3xl border border-slate-200/50 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/20 group">
+                                    <div className="flex items-center gap-5">
+                                        <div className={`w-12 h-12 flex items-center justify-center rounded-2xl font-display-black text-xl transition-all ${t.is_active
+                                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+                                            : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
                                             {t.name}
                                         </div>
                                         <div>
-                                            <span className="font-bold text-slate-900 dark:text-white uppercase tracking-widest text-sm">Registro {t.name}</span>
-                                            <p className="text-[10px] text-slate-500 font-mono font-bold uppercase">{t.is_active ? 'Visible en Matriz' : 'Suspensión Oculta'}</p>
+                                            <span className="font-display-black text-slate-900 dark:text-white uppercase tracking-widest text-sm italic">REGISTRO {t.name}</span>
+                                            <p className={`text-[9px] font-display-black uppercase tracking-widest mt-0.5 ${t.is_active ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                {t.is_active ? 'VISIBLE EN MATRIZ' : 'SUSPENSIÓN OCULTA'}
+                                            </p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={() => toggleTowerStatus(t.name, t.is_active)}
-                                        className={`relative inline-flex h-6 w-11 items-center rounded-none border-2 border-slate-900 dark:border-white transition-colors cursor-pointer ${t.is_active ? 'bg-slate-900 dark:bg-white' : 'bg-transparent'}`}
+                                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none ${t.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}
                                     >
-                                        <span className={`inline-block h-4 w-4 transform bg-white dark:bg-slate-900 border border-slate-900 transition-transform ${t.is_active ? 'translate-x-6' : 'translate-x-0 border-transparent dark:bg-white'}`} />
+                                        <div className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform duration-300 ${t.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
                                 </div>
                             )) : (
-                                <div className="p-4 bg-white dark:bg-slate-900 text-center text-slate-500 font-mono text-xs uppercase font-bold text-[10px]">Cargando torres...</div>
+                                <div className="p-12 text-center">
+                                    <div className="w-8 h-8 border-3 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+                                    <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest">Sincronizando torres...</p>
+                                </div>
                             )}
                         </div>
 
-                        <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <div className="p-8 pt-4">
                             <button
                                 onClick={() => setShowTowerModal(false)}
-                                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert border-2 border-slate-900 dark:border-white transition-all cursor-pointer"
+                                className="w-full py-5 bg-gradient-to-r from-slate-800 to-slate-950 dark:from-white dark:to-slate-100 text-white dark:text-slate-900 rounded-[1.5rem] font-display-black text-[10px] uppercase tracking-[0.2em] shadow-2xl hover:scale-[1.02] active:scale-95 transition-all"
                             >
-                                Guardar y Cerrar
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="material-icons text-sm">check_circle</span>
+                                    <span>Guardar y Finalizar</span>
+                                </div>
                             </button>
                         </div>
                     </div>

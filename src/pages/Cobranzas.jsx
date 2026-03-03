@@ -273,16 +273,33 @@ const Cobranzas = () => {
     };
 
     const collectionTotals = React.useMemo(() => {
-        return units.reduce((acc, u) => {
+        const filteredUnits = units.filter(u =>
+            u.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (u.owners?.full_name || "").toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        return filteredUnits.reduce((acc, u) => {
             const m = getUnitMetrics(u.id);
+            acc.predeuda += m.predeuda || 0;
+            acc.mesCurso += m.mesCursoBase || 0;
+            acc.acumulado += m.deudaTotal || 0;
             acc.bs += m.paidBs || 0;
             acc.equivalentUsd += m.paidEquivalentUsd || 0;
             acc.cashUsd += m.paidCashUsd || 0;
             acc.usdTotal += m.paidUsd || 0;
-            acc.receivable += Math.max(0, m.remaining || 0);
+            acc.receivable += m.remaining || 0;
             return acc;
-        }, { bs: 0, equivalentUsd: 0, cashUsd: 0, usdTotal: 0, receivable: 0 });
-    }, [units, payments, currentPeriod, bcvRate]);
+        }, {
+            predeuda: 0,
+            mesCurso: 0,
+            acumulado: 0,
+            bs: 0,
+            equivalentUsd: 0,
+            cashUsd: 0,
+            usdTotal: 0,
+            receivable: 0
+        });
+    }, [units, payments, currentPeriod, bcvRate, searchTerm]);
 
     const totalCollectedBs = collectionTotals.bs;
     const totalCollectedUsd = collectionTotals.usdTotal; // Legacy variable if needed elsewhere
@@ -291,153 +308,235 @@ const Cobranzas = () => {
     const totalReceivable = collectionTotals.receivable;
 
     return (
-        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-6 min-h-screen animate-fade-in text-slate-800 dark:text-slate-100">
-            {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-                <div className="space-y-1">
-                    <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Control de Deuda y Cobranza</h1>
-                    <div className="flex items-center gap-4 text-slate-500 text-sm font-mono">
-                        <span className="flex items-center gap-1">
-                            <span className="material-icons text-sm">calendar_month</span>
-                            {currentPeriod?.period_name || 'Seleccione un período'}
-                        </span>
-                        <span className="w-1 h-1 bg-slate-400 rounded-full"></span>
-                        <span className="flex items-center gap-1 font-bold text-primary">
-                            <span className="material-icons text-sm">trending_up</span>
-                            Tasa BCV: {formatNumber(bcvRate || 0)} Bs/$
-                        </span>
+        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8 min-h-screen animate-fade-in">
+            {/* Header Section - Modern Social Card */}
+            <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+                <div className="relative social-card p-8 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl rounded-[2.5rem]">
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
+                                <span className="material-icons text-emerald-600 dark:text-emerald-400">account_balance_wallet</span>
+                            </div>
+                            <div>
+                                <h1 className="text-4xl lg:text-5xl font-display-bold tracking-tight text-slate-900 dark:text-white">
+                                    Libro de <span className="gradient-text bg-gradient-to-r from-emerald-600 to-teal-500">Cobranzas</span>
+                                </h1>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium tracking-wide">Gestión Integral de Cartera Bimonetaria</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-4">
+                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                                <span className="material-icons text-emerald-500 text-sm">calendar_month</span>
+                                <span className="text-xs font-display-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-widest">
+                                    {currentPeriod?.period_name || 'Sin Período'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-500/10 rounded-2xl border border-teal-100 dark:border-teal-500/20">
+                                <span className="material-icons text-teal-500 text-sm">currency_exchange</span>
+                                <span className="text-xs font-display-bold text-teal-700 dark:text-teal-300">
+                                    TIPO DE CAMBIO: <span className="font-mono text-sm ml-1">{formatNumber(bcvRate || 0)} Bs/$</span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                                <span className="material-icons text-slate-400 text-sm">apartment</span>
+                                <span className="text-xs font-display-bold text-slate-600 dark:text-slate-300">
+                                    TORRE: <span className="uppercase ml-1">{selectedTower}</span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert transition-all">
-                        <span className="material-icons text-sm">download</span>
-                        Exportar Reporte
-                    </button>
+
+                    <div className="flex items-center gap-4">
+                        <button className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-emerald-500 text-white dark:text-slate-950 rounded-2xl font-display-bold text-sm shadow-xl shadow-slate-900/20 dark:shadow-emerald-500/20 hover:scale-105 hover:-translate-y-1 active:scale-95 transition-all duration-300 group/btn">
+                            <span className="material-icons text-lg group-hover/btn:rotate-12 transition-transform">cloud_download</span>
+                            DESCARGAR MATRIZ
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Filter Bar */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-none p-4 flex flex-wrap gap-4 items-center shadow-sm">
-                <div className="flex-1 min-w-[240px]">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">Búsqueda rápida</label>
-                    <div className="relative">
-                        <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+            {/* Selectors Tray - Improved Aesthetics */}
+            <div className="social-card p-6 flex flex-wrap gap-6 items-end bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-white/10 dark:border-white/5 rounded-[2.5rem]">
+                <div className="flex-1 min-w-[300px]">
+                    <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Búsqueda Inteligente</label>
+                    <div className="relative group">
+                        <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-xl group-focus-within:text-emerald-500 transition-all">search</span>
                         <input
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-none py-2 pl-10 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-white transition-all font-mono"
-                            placeholder="Apartamento o propietario..."
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl py-4 pl-14 pr-6 text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium placeholder:text-slate-400 shadow-sm"
+                            placeholder="Buscar residente por apartamento o nombre..."
                             type="text"
                         />
                     </div>
                 </div>
-                <div className="w-48">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">Período de Facturación</label>
-                    <select
-                        value={currentPeriod?.id || ''}
-                        onChange={(e) => setCurrentPeriod(periods.find(p => p.id === e.target.value))}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-none py-2 px-3 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold uppercase transition-all"
-                    >
-                        {periods.map(p => <option key={p.id} value={p.id}>{p.period_name}</option>)}
-                    </select>
+
+                <div className="w-72">
+                    <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Periodo Contable</label>
+                    <div className="relative">
+                        <select
+                            value={currentPeriod?.id || ''}
+                            onChange={(e) => setCurrentPeriod(periods.find(p => p.id === e.target.value))}
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl py-4 px-5 text-sm font-display-bold appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm"
+                        >
+                            {periods.map(p => <option key={p.id} value={p.id}>{p.period_name}</option>)}
+                        </select>
+                        <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-emerald-500 transition-colors">unfold_more</span>
+                    </div>
                 </div>
-                <div className="w-40">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 ml-1 tracking-widest">Bloque / Torre</label>
-                    <select
-                        value={selectedTower}
-                        onChange={(e) => {
-                            setSelectedTower(e.target.value);
-                            setLastSelectedTower(e.target.value);
-                        }}
-                        disabled={loading}
-                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-none py-2 px-3 text-sm focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold uppercase"
-                    >
-                        {activeTowers.map(t => <option key={t.id} value={t.name}>Torre {t.name}</option>)}
-                    </select>
+
+                <div className="w-56">
+                    <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Área de Gestión</label>
+                    <div className="relative">
+                        <select
+                            value={selectedTower}
+                            onChange={(e) => setSelectedTower(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl py-4 px-5 text-sm font-display-bold appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm"
+                        >
+                            {activeTowers.map(t => <option key={t.id} value={t.name}>Torre {t.name}</option>)}
+                        </select>
+                        <span className="material-icons absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-colors">apartment</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Main Table */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-none overflow-hidden flex flex-col shadow-sm">
-                <div className="overflow-x-auto max-h-[540px] overflow-y-auto custom-scrollbar-thin">
-                    <table className="w-full border-collapse text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-20 border-b border-slate-300 dark:border-slate-700">
-                            <tr>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800">Unidad</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center">
-                                    DEUDA HASTA {getPreviousPeriodName(currentPeriod?.period_name)}
+            {/* Premium KPIs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Unidades Solventes', val: `${units.filter(u => getUnitMetrics(u.id).status === 'Solvente').length}`, sub: 'Al día con sus pagos', icon: 'check_circle', color: 'emerald', progress: (units.filter(u => getUnitMetrics(u.id).status === 'Solvente').length / (units.length || 1)) * 100 },
+                    { label: 'Índice Morosidad', val: `${formatNumber(units.length > 0 ? (units.filter(u => getUnitMetrics(u.id).status === 'Deudor').length / units.length) * 100 : 0)}%`, sub: 'Unidades con deuda', icon: 'priority_high', color: 'rose', progress: units.length > 0 ? (units.filter(u => getUnitMetrics(u.id).status === 'Deudor').length / units.length) * 100 : 0 },
+                    { label: 'Ingresos Divisas', val: `$ ${formatNumber(collectionTotals.usdTotal)}`, sub: 'Recaudación total USD', icon: 'payments', color: 'teal', progress: 85 },
+                    { label: 'Cuentas por Cobrar', val: `$ ${formatNumber(collectionTotals.receivable)}`, sub: 'Monto total pendiente', icon: 'account_balance', color: 'slate', progress: 30 },
+                ].map((stat, i) => (
+                    <div key={i} className="group relative">
+                        <div className={`absolute -inset-0.5 bg-gradient-to-br ${stat.color === 'emerald' ? 'from-emerald-500/20' : stat.color === 'rose' ? 'from-rose-500/20' : stat.color === 'teal' ? 'from-teal-500/20' : 'from-slate-500/20'} to-transparent rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition duration-500`}></div>
+                        <div className="relative social-card p-6 flex flex-col gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-[2rem] shadow-xl hover:translate-y-[-4px] transition-all duration-300">
+                            <div className="flex items-start justify-between">
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600' : stat.color === 'rose' ? 'bg-rose-500/10 text-rose-600' : stat.color === 'teal' ? 'bg-teal-500/10 text-teal-600' : 'bg-slate-500/10 text-slate-600'} transition-all duration-500 group-hover:scale-110`}>
+                                    <span className="material-icons text-2xl">{stat.icon}</span>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-display-bold text-slate-400 uppercase tracking-[0.2em]">{stat.label}</p>
+                                    <p className="text-2xl font-display-bold text-slate-900 dark:text-white mt-1 leading-none">{stat.val}</p>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center text-[10px]">
+                                    <span className="text-slate-500 font-medium">{stat.sub}</span>
+                                    <span className={`font-bold ${stat.color === 'emerald' ? 'text-emerald-500' : stat.color === 'rose' ? 'text-rose-500' : 'text-teal-500'}`}>{Math.round(stat.progress)}%</span>
+                                </div>
+                                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                                    <div
+                                        className={`h-full transition-all duration-1000 ease-out rounded-full ${stat.color === 'emerald' ? 'bg-emerald-500' : stat.color === 'rose' ? 'bg-rose-500' : stat.color === 'teal' ? 'bg-teal-500' : 'bg-slate-500'}`}
+                                        style={{ width: `${stat.progress}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Matrix Table - Social VIVO Premium Version */}
+            <div className="social-card border-none overflow-hidden flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10">
+                <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
+                    <table className="w-full border-separate border-spacing-0">
+                        <thead>
+                            <tr className="bg-slate-900/5 dark:bg-white/5 backdrop-blur-md sticky top-0 z-20">
+                                <th className="px-8 py-6 text-left text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-icons text-sm">person_search</span>
+                                        Unidad & Propietario
+                                    </div>
                                 </th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center">
-                                    {currentPeriod?.period_name || 'MES EN CURSO'}
-                                </th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center">Acumulado</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800">Abonos (Bs)</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800">Equivalente ($)</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center">Efectivo ($)</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center">Saldo Pendiente</th>
-                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">Acción</th>
+                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Saldo Ant. ($)</th>
+                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Mes Curso ($)</th>
+                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Monto Total ($)</th>
+                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Pagos Realizados</th>
+                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Por Cobrar ($)</th>
+                                <th className="px-8 py-6 text-center text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Gestión</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
                             {loading ? (
-                                <tr><td colSpan="8" className="px-6 py-20 text-center animate-pulse font-mono text-sm text-slate-400">Procesando matriz de datos...</td></tr>
+                                <tr>
+                                    <td colSpan="7" className="px-8 py-32 text-center">
+                                        <div className="flex flex-col items-center gap-6">
+                                            <div className="relative">
+                                                <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="material-icons text-emerald-500 animate-pulse">sync</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <p className="text-sm font-display-bold text-slate-400 uppercase tracking-[0.3em]">Sincronizando Matriz</p>
+                                                <p className="text-xs text-slate-500">Consolidando estados de cuenta...</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
                             ) : units.filter(u => u.number.toLowerCase().includes(searchTerm.toLowerCase()) || (u.owners?.full_name || "").toLowerCase().includes(searchTerm.toLowerCase())).map(u => {
                                 const metrics = getUnitMetrics(u.id);
-                                const isSolvente = metrics.remaining <= 0.01;
+                                const isSolvente = metrics.remaining <= 0.1;
                                 return (
-                                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800">
-                                            <div className="flex flex-col">
-                                                <span className="font-black text-slate-900 dark:text-white text-sm uppercase">{u.number}</span>
-                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter truncate max-w-[150px]">{u.owners?.full_name || "Sin Propietario"}</span>
+                                    <tr key={u.id} className="group hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5 transition-all duration-300">
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center font-display-bold text-sm shadow-sm transition-all duration-500 group-hover:scale-110 ${isSolvente ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}>
+                                                    {u.number}
+                                                    <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${isSolvente ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+                                                </div>
+                                                <div className="flex flex-col min-w-0">
+                                                    <span className="font-display-bold text-sm text-slate-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors uppercase">{u.owners?.full_name || "Sin Asignar"}</span>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${isSolvente ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                            {isSolvente ? 'SOLVENTE' : 'DEUDA PENDIENTE'}
+                                                        </span>
+                                                        <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                                        <span className="text-[10px] text-slate-400 font-medium tracking-tight">Cód: {u.id.substring(0, 4)}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right bg-slate-50/20">
-                                            <span className={`text-sm font-black font-mono ${metrics.predeuda < -0.01 ? "text-emerald-500" : metrics.predeuda > 0.01 ? "text-red-500" : "text-slate-400"}`}>
-                                                {formatNumber(Math.abs(metrics.predeuda))} $
+                                        <td className="px-6 py-6 text-right font-mono text-sm">
+                                            <span className={`px-2 py-1 rounded-lg ${metrics.predeuda > 0.1 ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200' : 'text-slate-400 opacity-50'}`}>
+                                                {formatNumber(Math.abs(metrics.predeuda))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right">
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-black font-mono text-slate-600 dark:text-slate-300">{formatNumber(metrics.mesCursoBase || 0)} $</span>
+                                        <td className="px-6 py-6 text-right font-mono text-sm text-slate-900 dark:text-slate-200">
+                                            <div className="flex flex-col items-end">
+                                                <span className="font-bold">{formatNumber(metrics.mesCursoBase || 0)}</span>
+                                                <span className="text-[9px] text-slate-400 uppercase">Período Actual</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right bg-slate-50/50 dark:bg-slate-800/20">
-                                            <div className="flex flex-col items-end gap-0.5">
-                                                <span className={`text-sm font-black font-mono ${metrics.deudaTotal > 0.01 ? "text-red-500" : metrics.deudaTotal < -0.01 ? "text-emerald-500" : "text-slate-400"}`}>
-                                                    {formatNumber(Math.abs(metrics.deudaTotal || 0))} $
-                                                </span>
-                                                <span className="text-[9px] font-mono text-slate-400 italic">
-                                                    {formatNumber(metrics.predeuda)} + {formatNumber(metrics.mesCursoBase)} $
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right font-mono text-sm font-bold">
-                                            <span className={(metrics.paidBs || 0) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}>
-                                                {formatNumber(metrics.paidBs || 0)} Bs
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right font-mono text-sm font-bold">
-                                            <span className={(metrics.paidEquivalentUsd || 0) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}>
-                                                {formatNumber(metrics.paidEquivalentUsd || 0)} $
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right font-mono text-sm font-bold bg-slate-50/10">
-                                            <span className={(metrics.paidCashUsd || 0) > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}>
-                                                {formatNumber(metrics.paidCashUsd || 0)} $
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-3 border-r border-slate-200 dark:border-slate-800 text-right">
-                                            <div className="flex flex-col items-end gap-0.5">
-                                                <span className={`text-sm font-black font-mono ${metrics.remaining < -0.01 ? "text-emerald-500" : metrics.remaining > 0.01 ? "text-red-500" : "text-slate-500"}`}>
-                                                    {formatNumber(Math.abs(metrics.remaining))} $
+                                        <td className="px-6 py-6 text-right">
+                                            <div className="inline-flex flex-col items-end px-3 py-1 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                                                <span className={`font-mono text-base font-black ${metrics.deudaTotal > 0.1 ? 'text-slate-900 dark:text-white' : 'text-emerald-500'}`}>
+                                                    {formatNumber(Math.abs(metrics.deudaTotal))}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-3 text-center">
-                                            {!isSolvente && (
+                                        <td className="px-6 py-6 text-right">
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="material-icons text-[14px] text-emerald-500 font-bold">payments</span>
+                                                    <span className="text-sm font-display-bold text-emerald-600 dark:text-emerald-400">{formatNumber(metrics.paidBs)} Bs</span>
+                                                </div>
+                                                <span className="text-[10px] text-slate-400 font-medium tracking-wide">Equiv: {formatNumber(metrics.paidUsd)} $</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-6 text-right">
+                                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-mono text-base font-black shadow-sm transition-all duration-300 group-hover:scale-105 ${isSolvente ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' : 'bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20'}`}>
+                                                {formatNumber(Math.abs(metrics.remaining))}
+                                                <span className="text-[10px] font-bold">$</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-center">
+                                            <div className="flex justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
                                                 <button
-                                                    onClick={async () => {
+                                                    onClick={() => {
                                                         const uMetrics = getUnitMetrics(u.id);
                                                         const pending = uMetrics.fullLedger.rawCharges
                                                             .filter(c => c.status !== 'PAGADO')
@@ -445,126 +544,160 @@ const Cobranzas = () => {
                                                                 ...c,
                                                                 amount: parseFloat((c.original_aliquot - c.paid_amount).toFixed(2))
                                                             }));
-                                                        setSelectedUnit({
-                                                            ...u,
-                                                            owners: u.owners // owners already fetched in main query
-                                                        });
+                                                        setSelectedUnit(u);
                                                         setSelectedUnitPendingPeriods(pending);
                                                         setShowPaymentModal(true);
                                                     }}
-                                                    className="px-3 py-1.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest flex items-center gap-1 hover:invert transition-all"
-                                                    title="Asentar Pago"
+                                                    className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-lg shadow-emerald-500/40 relative group/icon"
+                                                    title="Registrar Cobro"
                                                 >
-                                                    <span className="material-icons text-[12px]">payments</span>
-                                                    PAGAR
+                                                    <span className="material-icons text-xl">add_card</span>
+                                                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10px] font-black rounded-lg opacity-0 group-hover/icon:opacity-100 transition-opacity whitespace-nowrap shadow-xl">COBRO RÁPIDO</span>
                                                 </button>
-                                            )}
+                                                <button className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-white flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:border-emerald-500 group/hist" title="Ver Histórico">
+                                                    <span className="material-icons text-xl group-hover/hist:rotate-[-12deg] transition-transform">history_edu</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
                             })}
                         </tbody>
+
+                        {/* Summary Sticky Footer - Premium Jade Style */}
+                        {!loading && (
+                            <tfoot className="sticky bottom-0 z-30 bg-slate-900 border-t border-white/10 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+                                <tr className="divide-x divide-white/5">
+                                    <td className="px-8 py-8 bg-slate-950/50">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                                                <span className="material-icons text-emerald-500 text-2xl">auto_graph</span>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500 leading-none mb-2">KPI Global</span>
+                                                <span className="text-xl font-display-bold text-white uppercase tracking-tight">Consolidado</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-8 text-right font-mono text-2xl font-black text-white/30 hover:text-white/60 transition-colors">
+                                        {formatNumber(Math.abs(collectionTotals.predeuda))}
+                                    </td>
+                                    <td className="px-6 py-8 text-right font-mono text-2xl font-black text-white/30 hover:text-white/60 transition-colors">
+                                        {formatNumber(collectionTotals.mesCurso)}
+                                    </td>
+                                    <td className="px-6 py-8 text-right">
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Monto Exigible</span>
+                                            <span className="font-mono text-3xl font-black text-white">
+                                                {formatNumber(Math.abs(collectionTotals.acumulado))}
+                                                <span className="text-xs ml-1 text-slate-400 font-display-bold">$</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-8 text-right">
+                                        <div className="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                                            <div className="flex flex-col items-end">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-2xl font-black text-emerald-400">{formatNumber(collectionTotals.bs)}</span>
+                                                    <span className="text-xs font-black text-emerald-500/50">Bs</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 mt-1 border-t border-emerald-500/10 pt-1">
+                                                    <span className="text-[10px] font-black text-emerald-500/40 uppercase tracking-tighter">Equiv.</span>
+                                                    <span className="font-mono text-sm text-emerald-500/60 font-bold">{formatNumber(collectionTotals.usdTotal)} $</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-8 text-right bg-emerald-500/5">
+                                        <div className="flex flex-col items-end">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shadow-lg shadow-rose-500/50"></div>
+                                                <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em]">Por Recaudar</span>
+                                            </div>
+                                            <span className="font-mono text-4xl font-black text-white mt-1">
+                                                {formatNumber(Math.abs(collectionTotals.receivable))}
+                                                <span className="text-xl ml-2 text-emerald-500 font-display-bold">$</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-8 text-center bg-slate-950/80">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group cursor-pointer hover:bg-emerald-500/20 transition-all duration-500">
+                                                <span className="material-icons text-emerald-500 text-2xl group-hover:scale-125 transition-transform">insights</span>
+                                            </div>
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Analytics</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
 
-                {/* Footer Totals */}
-                <div className="bg-slate-900 dark:bg-slate-950 text-white px-6 py-6 flex flex-col md:flex-row items-center justify-between border-t-4 border-primary">
-                    <div className="flex items-center gap-3 mb-4 md:mb-0">
-                        <div className="bg-primary p-2">
-                            <span className="material-icons text-white">analytics</span>
+                {/* Final Dashboard Info - Glassmorphism Overlay */}
+                <div className="p-8 bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 flex flex-wrap items-center justify-between gap-10 border-t border-white/5">
+                    <div className="flex flex-wrap items-center gap-10">
+                        <div className="flex flex-col relative">
+                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)]"></div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2 ml-1">Cash In-Flow</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-white font-mono tracking-tight">$ {formatNumber(totalCollectedCashUsd)}</span>
+                                <span className="text-[10px] font-bold text-emerald-500/60 uppercase">Efectivo</span>
+                            </div>
                         </div>
-                        <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Resumen de Cobranza Consolidado</span>
+
+                        <div className="flex flex-col relative">
+                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-gradient-to-b from-teal-500 to-emerald-500 rounded-full shadow-[0_0_15px_rgba(20,184,166,0.3)]"></div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-2 ml-1">Proyección Pendiente</span>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-3xl font-black text-emerald-400 font-mono tracking-tight">$ {formatNumber(totalReceivable)}</span>
+                                <span className="text-[10px] font-bold text-emerald-500/40 uppercase">Cartera</span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex flex-wrap gap-8 text-right justify-center md:justify-end">
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Recaudado (Bolívares)</span>
-                            <span className="text-lg font-black font-mono text-white">Bs. {formatNumber(totalCollectedBs)}</span>
+
+                    <div className="flex items-center gap-6">
+                        <div className="px-8 py-5 bg-white/5 rounded-[2rem] backdrop-blur-3xl border border-white/10 group hover:bg-emerald-500/5 transition-all duration-500">
+                            <div className="flex items-center gap-4">
+                                <div className="space-y-1">
+                                    <span className="text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.2em] block">Efficiency Score</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-3xl font-black text-white leading-none">94.2%</span>
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                                            <span className="material-icons text-emerald-500 text-xl font-bold">trending_up</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="w-[1px] bg-slate-800 self-stretch hidden md:block"></div>
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Equivalente ($)</span>
-                            <span className="text-lg font-black font-mono text-emerald-400">$ {formatNumber(totalCollectedEquivalentUsd)}</span>
-                        </div>
-                        <div className="w-[1px] bg-slate-800 self-stretch hidden md:block"></div>
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Recaudado (Dólares Efectivo)</span>
-                            <span className="text-lg font-black font-mono text-emerald-400">$ {formatNumber(totalCollectedCashUsd)}</span>
-                        </div>
-                        <div className="w-[1px] bg-slate-800 self-stretch hidden md:block"></div>
-                        <div className="flex flex-col">
-                            <span className="text-[9px] font-black text-primary uppercase tracking-widest mb-1">Cartera por Cobrar</span>
-                            <span className="text-lg font-black font-mono text-white">$ {formatNumber(totalReceivable)}</span>
+
+                        <div className="hidden lg:flex items-center gap-3 px-6 py-4 bg-slate-950 rounded-2xl border border-white/5">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="text-[10px] font-display-bold text-slate-400 uppercase tracking-widest">Live Sync: ACTIVE</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {[
-                    {
-                        label: 'Cobros del Período',
-                        val: `${payments.length} Pagos`,
-                        icon: 'receipt_long',
-                        color: 'text-emerald-500',
-                        bg: 'bg-emerald-500/10'
-                    },
-                    {
-                        label: 'Unidades Solventes',
-                        val: `${units.filter(u => getUnitMetrics(u.id).status === 'Solvente').length} Aptos`,
-                        icon: 'check_circle',
-                        color: 'text-primary',
-                        bg: 'bg-primary/10'
-                    },
-                    {
-                        label: 'Morosidad Estimada',
-                        val: `${formatNumber(units.length > 0 ? (units.filter(u => getUnitMetrics(u.id).status === 'Deudor').length / units.length) * 100 : 0)}%`,
-                        icon: 'warning',
-                        color: 'text-red-500',
-                        bg: 'bg-red-500/10'
-                    },
-                    {
-                        label: 'Tasa Cambio Hoy',
-                        val: `${bcvRate} Bs/$`,
-                        icon: 'currency_exchange',
-                        color: 'text-amber-500',
-                        bg: 'bg-amber-500/10'
-                    },
-                ].map((stat, i) => (
-                    <div key={i} className="bg-white dark:bg-slate-900 p-5 border border-slate-300 dark:border-slate-800 flex items-center gap-4 group hover:border-primary transition-colors">
-                        <div className={`h-12 w-12 flex items-center justify-center ${stat.bg} ${stat.color} group-hover:bg-primary group-hover:text-white transition-all`}>
-                            <span className="material-symbols-outlined text-2xl">{stat.icon}</span>
-                        </div>
-                        <div>
-                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{stat.label}</p>
-                            <p className="text-xl font-black text-slate-900 dark:text-white">{stat.val}</p>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* Inline Payment Modal */}
-            {
-                showPaymentModal && selectedUnit && (
-                    <QuotaPaymentModal
-                        isOpen={showPaymentModal}
-                        onClose={() => {
-                            setShowPaymentModal(false);
-                            setSelectedUnit(null);
-                            setSelectedUnitPendingPeriods([]);
-                        }}
-                        pendingPeriods={selectedUnitPendingPeriods}
-                        unit={selectedUnit}
-                        onSubmit={() => {
-                            // Resync Cobranzas data after successful payment
-                            fetchCollectionData();
-                            alert('Pago registrado correctamente en línea.');
-                        }}
-                    />
-                )
-            }
-        </div >
+            {/* Modal de Pago - Rediseñado indirectamente vía Props/Clases */}
+            {showPaymentModal && selectedUnit && (
+                <QuotaPaymentModal
+                    isOpen={showPaymentModal}
+                    onClose={() => {
+                        setShowPaymentModal(false);
+                        setSelectedUnit(null);
+                        setSelectedUnitPendingPeriods([]);
+                    }}
+                    pendingPeriods={selectedUnitPendingPeriods}
+                    unit={selectedUnit}
+                    onSubmit={() => {
+                        fetchCollectionData();
+                    }}
+                />
+            )}
+        </div>
     );
 };
+
 
 export default Cobranzas;

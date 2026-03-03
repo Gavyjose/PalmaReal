@@ -40,8 +40,12 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
         }
     }, [isOpen, paymentDate]);
 
-    // Calcular totales
-    const totalSelectedUsd = selectedPeriods.reduce((sum, p) => sum + p.amount, 0);
+    // Calcular totales - Priorizamos pendingDebt
+    const totalSelectedUsd = selectedPeriods.reduce((sum, p) => {
+        const totalAbonado = (p.paid_amount || 0) + (p.credit_applied || 0);
+        const pendingDebt = Math.max(0, p.amount - totalAbonado);
+        return sum + pendingDebt;
+    }, 0);
     const amountUsd = paymentMethod === 'TRANSFER'
         ? (bcvRate > 0 && amountBs > 0 ? parseFloat((parseFloat(amountBs) / bcvRate).toFixed(2)) : 0)
         : (parseFloat(cashAmountUsd) || 0);
@@ -123,7 +127,14 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
                 for (const period of sortedToPay) {
                     if (remainingUsd <= 0.001) break; // Casi cero
 
-                    const amountToAllocate = parseFloat(Math.min(remainingUsd, period.amount).toFixed(2));
+                    const totalAbonado = (period.paid_amount || 0) + (period.credit_applied || 0);
+                    const pendingDebt = Math.max(0, period.amount - totalAbonado);
+
+                    // Distribuir el pago solo al máximo de la deuda real de este período
+                    const amountToAllocate = parseFloat(Math.min(remainingUsd, pendingDebt).toFixed(2));
+
+                    if (amountToAllocate <= 0) continue; // Si ya estaba pagada por completo, saltar
+
                     remainingUsd = parseFloat((remainingUsd - amountToAllocate).toFixed(2));
 
                     if (period.type === 'CONDO') {
@@ -234,6 +245,9 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
                                         typeColor = 'text-red-600';
                                     }
 
+                                    const totalAbonado = (period.paid_amount || 0) + (period.credit_applied || 0);
+                                    const pendingDebt = Math.max(0, period.amount - totalAbonado);
+
                                     return (
                                         <div
                                             key={period.id}
@@ -258,7 +272,7 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
                                                 </div>
                                             </div>
                                             <p className={`font-mono font-black tabular-nums transition-colors ${isSelected ? 'text-slate-900 dark:text-white text-base' : 'text-slate-500 text-sm'}`}>
-                                                $ {formatCurrency(period.amount)}
+                                                $ {formatCurrency(pendingDebt)}
                                             </p>
                                         </div>
                                     );

@@ -33,8 +33,8 @@ const PasswordRecovery = lazy(() => import('./pages/PasswordRecovery'));
 // Loading Fallback UI
 const PageLoader = () => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950">
-    <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin dark:border-slate-800 dark:border-t-white"></div>
-    <p className="mt-4 font-mono font-bold text-slate-500 uppercase tracking-widest text-xs">Cargando Módulo...</p>
+    <div className="w-16 h-16 border-4 border-slate-200 border-t-emerald-500 rounded-full animate-spin dark:border-slate-800 dark:border-t-emerald-400"></div>
+    <p className="mt-4 font-mono font-bold text-slate-500 uppercase tracking-widest text-[10px]">Sincronizando Live Connect...</p>
   </div>
 );
 

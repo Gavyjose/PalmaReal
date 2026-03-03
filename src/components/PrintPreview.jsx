@@ -1,8 +1,29 @@
 import React from 'react';
 import { BUILDING_CONFIG } from '../config/buildingConfig';
 import { formatCurrency } from '../utils/formatters';
+import { supabase } from '../supabase';
 
 const PrintPreview = ({ isOpen, onClose, data }) => {
+    const [settings, setSettings] = React.useState({
+        header_fullname: BUILDING_CONFIG.fullName,
+        header_address: BUILDING_CONFIG.address,
+        bank_name: '',
+        account_number: '',
+        account_holder: '',
+        pm_bank_code: '',
+        pm_id: '',
+        pm_phone: '',
+        tower_name_prefix: 'Torre Araguaney'
+    });
+
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            const { data: sData } = await supabase.from('building_settings').select('*').limit(1).maybeSingle();
+            if (sData) setSettings(sData);
+        };
+        if (isOpen) fetchSettings();
+    }, [isOpen]);
+
     if (!isOpen || !data) return null;
 
     const { selectedTower, period, expenses, finalTotal, aliquotPerUnit, reserveFundAmount } = data;
@@ -49,23 +70,18 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                         {/* Report Header */}
                         <div className="flex flex-col md:flex-row justify-between items-start gap-6 border-b-2 border-primary/20 pb-8 mb-10 print:pb-4 print:mb-6 print:gap-2">
                             <div>
-                                <h1 className="text-3xl font-black text-primary mb-2 uppercase tracking-tight print:text-xl print:mb-1">{BUILDING_CONFIG.fullName}</h1>
+                                <h1 className="text-3xl font-black text-primary mb-2 uppercase tracking-tight print:text-xl print:mb-1">{settings.header_fullname}</h1>
                                 <div className="space-y-1">
                                     <p className="text-sm font-bold text-slate-600 dark:text-slate-400 flex items-center gap-2">
                                         <span className="material-icons text-[14px]">location_on</span>
-                                        {BUILDING_CONFIG.address}
+                                        {settings.header_address}
                                     </p>
-                                    <p className="text-sm font-bold text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                                        <span className="material-icons text-[14px]">phone</span>
-                                        {BUILDING_CONFIG.phone}
-                                    </p>
-                                    <p className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded w-fit mt-2 print:mt-1 print:px-2 print:py-0.5">RIF: J-XXXXXXXX-X</p>
                                 </div>
                             </div>
                             <div className="text-right flex flex-col items-end">
                                 <div className="bg-primary text-white px-4 py-2 rounded-lg font-black text-xs mb-4 uppercase tracking-widest print:py-1 print:px-3 print:mb-2 print:text-[8px]">Estado de Cuenta Mensual</div>
                                 <h2 className="text-2xl font-black text-slate-800 dark:text-white uppercase print:text-lg">{period}</h2>
-                                <p className="text-sm font-black text-primary mt-1 uppercase print:text-xs">Torre {selectedTower}</p>
+                                <p className="text-sm font-black text-primary mt-1 uppercase print:text-xs">{settings.tower_name_prefix} {selectedTower.replace(/\D/g, '')}</p>
                             </div>
                         </div>
 
@@ -80,7 +96,8 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                 <tr className="bg-slate-800 text-white text-[10px] uppercase font-black tracking-widest print:text-[8px]">
                                     <th className="px-4 py-3 text-left w-12 print:py-1.5 print:px-2">#</th>
                                     <th className="px-4 py-3 text-left print:py-1.5 print:px-2">Concepto / Descripción del Gasto</th>
-                                    <th className="px-4 py-3 text-right print:py-1.5 print:px-2">Monto (USD $)</th>
+                                    <th className="px-4 py-3 text-right w-24 print:py-1.5 print:px-2">Monto Total</th>
+                                    <th className="px-4 py-3 text-right w-24 bg-emerald-700 print:py-1.5 print:px-2">Alícuota (USD)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 border-x border-b border-slate-200 dark:border-slate-800 print:text-[11px]">
@@ -89,6 +106,7 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                         <td className="px-4 py-3 text-slate-400 font-bold print:py-1 print:px-2 text-center">{idx + 1}</td>
                                         <td className="px-4 py-3 text-slate-800 dark:text-slate-200 uppercase print:py-1 print:px-2">{exp.description}</td>
                                         <td className="px-4 py-3 text-right font-black print:py-1 print:px-2">$ {formatCurrency(exp.amount)}</td>
+                                        <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50/30 dark:bg-emerald-900/10 print:py-1 print:px-2">$ {formatCurrency(exp.amount / 16)}</td>
                                     </tr>
                                 ))}
                                 {/* Reserve Fund Row */}
@@ -96,12 +114,14 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                     <td className="px-4 py-3 print:py-1 print:px-2"></td>
                                     <td className="px-4 py-3 uppercase print:py-1 print:px-2">Provisión Fondo de Reserva Mensual</td>
                                     <td className="px-4 py-3 text-right print:py-1 print:px-2">$ {formatCurrency(reserveFundAmount)}</td>
+                                    <td className="px-4 py-3 text-right print:py-1 print:px-2">$ {formatCurrency(reserveFundAmount / 16)}</td>
                                 </tr>
                             </tbody>
                             <tfoot>
                                 <tr className="bg-primary/5 text-primary border-2 border-primary/20">
-                                    <td colSpan="2" className="px-4 py-6 text-right font-black text-base uppercase tracking-wider print:py-3 print:text-xs">Total Gastos de la Torre</td>
-                                    <td className="px-4 py-6 text-right font-black text-xl print:py-3 print:text-lg">$ {formatCurrency(finalTotal)}</td>
+                                    <td colSpan="2" className="px-4 py-6 text-right font-black text-base uppercase tracking-wider print:py-3 print:text-[10px]">Total Gastos de la Torre</td>
+                                    <td className="px-4 py-6 text-right font-black text-xl print:py-3 print:text-base">$ {formatCurrency(finalTotal)}</td>
+                                    <td className="px-4 py-6 text-right font-black text-xl bg-emerald-500 text-white print:py-3 print:text-base">$ {formatCurrency(aliquotPerUnit)}</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -125,12 +145,35 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-6 rounded-xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 flex flex-col justify-center items-center text-center print:p-3">
-                                <span className="material-icons text-slate-400 text-4xl mb-3 print:text-2xl print:mb-1">payments</span>
-                                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1 print:text-[8px]">Recordatorio de Pago</h4>
-                                <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 leading-relaxed uppercase print:text-[9px]">
-                                    Este recibo refleja montos calculados exclusivamente en <span className="text-primary font-black">Dólares Americanos (USD)</span>.
-                                </p>
+                            <div className="p-6 rounded-xl bg-slate-100 dark:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-600 print:p-3">
+                                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3 print:text-[8px] flex items-center gap-2">
+                                    <span className="material-icons text-sm">payments</span> Datos para el Pago
+                                </h4>
+                                <div className="space-y-1 text-left">
+                                    <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase print:text-[8px]">
+                                        <span className="opacity-50">Banco:</span> {settings.bank_name || 'N/A'}
+                                    </p>
+                                    <p className="text-[11px] font-black text-slate-900 dark:text-white print:text-[9px]">
+                                        <span className="opacity-50 font-bold">Cuenta:</span> {settings.account_number || 'N/A'}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase print:text-[7px]">
+                                        <span className="opacity-50">Titular:</span> {settings.account_holder || 'N/A'}
+                                    </p>
+                                    <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 border-dashed">
+                                        <p className="text-[10px] font-black text-emerald-600 uppercase mb-1 print:text-[8px]">Pago Móvil:</p>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase print:text-[7px]">
+                                                <span className="opacity-50">Banco (Cod):</span> {settings.pm_bank_code || 'N/A'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase print:text-[7px]">
+                                                <span className="opacity-50">Cédula:</span> {settings.pm_id || 'N/A'}
+                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase col-span-2 print:text-[7px]">
+                                                <span className="opacity-50">Celular:</span> {settings.pm_phone || 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -154,6 +197,35 @@ const PrintPreview = ({ isOpen, onClose, data }) => {
                     </div>
                 </div>
             </div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @media print {
+                    @page {
+                        margin: 0;
+                        size: auto;
+                    }
+                    body * {
+                        visibility: hidden !important;
+                    }
+                    #printable-report, #printable-report * {
+                        visibility: visible !important;
+                    }
+                    #printable-report {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 1.5cm !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                    .no-print {
+                        display: none !important;
+                    }
+                }
+            ` }} />
         </div>
     );
 };

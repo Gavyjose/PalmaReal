@@ -2,9 +2,14 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../hooks/usePermissions';
+import ChangePasswordModal from '../components/auth/ChangePasswordModal';
 
 const DashboardLayout = () => {
     const location = useLocation();
+    const { user } = useAuth();
+    const { mustChangePassword, loading: permissionsLoading } = usePermissions();
 
     // Mapeo de rutas a títulos
     const getTitle = (path) => {
@@ -23,14 +28,21 @@ const DashboardLayout = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-background-light dark:bg-background-dark font-display text-slate-800 dark:text-slate-100">
+        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-display text-slate-800 dark:text-slate-100 selection:bg-emerald-500/30">
             <Sidebar />
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative transition-all duration-300">
                 <Header title={getTitle(location.pathname)} />
-                <div className="flex-1 overflow-y-auto">
-                    <Outlet />
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-10">
+                    <div className="max-w-[1600px] mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <Outlet />
+                    </div>
                 </div>
             </main>
+
+            <ChangePasswordModal
+                isOpen={mustChangePassword}
+                userEmail={user?.email}
+            />
         </div>
     );
 };

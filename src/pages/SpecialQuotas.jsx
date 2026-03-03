@@ -119,6 +119,7 @@ const SpecialQuotas = () => {
         date: new Date().toISOString().split('T')[0],
         reference: ''
     });
+    const [editingExpenseId, setEditingExpenseId] = useState(null);
     const [loadingExpenseRate, setLoadingExpenseRate] = useState(false);
 
     useEffect(() => {
@@ -349,23 +350,34 @@ const SpecialQuotas = () => {
 
         try {
             setIsMutating(true);
-            const { error } = await supabase
-                .from('special_quota_expenses')
-                .insert([{
-                    project_id: project.id,
-                    description: newExpense.description.toUpperCase(),
-                    category: newExpense.category,
-                    amount_bs: amountBs,
-                    bcv_rate: newExpense.bcv_rate,
-                    amount_usd: parseFloat(amountUsd.toFixed(2)),
-                    date: newExpense.date,
-                    reference: newExpense.reference ? newExpense.reference.toUpperCase() : null
-                }]);
+            const expenseData = {
+                project_id: project.id,
+                description: newExpense.description.toUpperCase(),
+                category: newExpense.category,
+                amount_bs: amountBs,
+                bcv_rate: newExpense.bcv_rate,
+                amount_usd: parseFloat(amountUsd.toFixed(2)),
+                date: newExpense.date,
+                reference: newExpense.reference ? newExpense.reference.toUpperCase() : null
+            };
 
-            if (error) throw error;
+            if (editingExpenseId) {
+                const { error } = await supabase
+                    .from('special_quota_expenses')
+                    .update(expenseData)
+                    .eq('id', editingExpenseId);
+                if (error) throw error;
+                alert('✅ Egreso actualizado exitosamente.');
+            } else {
+                const { error } = await supabase
+                    .from('special_quota_expenses')
+                    .insert([expenseData]);
+                if (error) throw error;
+                alert('✅ Egreso registrado exitosamente.');
+            }
 
-            alert('✅ Egreso registrado exitosamente.');
             setShowExpenseModal(false);
+            setEditingExpenseId(null);
             setNewExpense({
                 description: '',
                 category: 'MATERIALES',
@@ -377,11 +389,47 @@ const SpecialQuotas = () => {
             });
             mutateData();
         } catch (error) {
-            console.error('Error registering expense:', error);
-            alert('Error al registrar egreso: ' + error.message);
+            console.error('Error registering/updating expense:', error);
+            alert('Error al procesar egreso: ' + error.message);
         } finally {
             setIsMutating(false);
         }
+    };
+
+    const handleDeleteExpense = async (id) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar este egreso? Esta acción no se puede deshacer.')) return;
+
+        try {
+            setIsMutating(true);
+            const { error } = await supabase
+                .from('special_quota_expenses')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+
+            alert('✅ Egreso eliminado correctamente.');
+            mutateData();
+        } catch (error) {
+            console.error('Error deleting expense:', error);
+            alert('Error al eliminar egreso: ' + error.message);
+        } finally {
+            setIsMutating(false);
+        }
+    };
+
+    const openEditModal = (exp) => {
+        setEditingExpenseId(exp.id);
+        setNewExpense({
+            description: exp.description,
+            category: exp.category,
+            amount_bs: exp.amount_bs || '',
+            bcv_rate: exp.bcv_rate || 0,
+            amount_usd: exp.amount_usd || '',
+            date: exp.date,
+            reference: exp.reference || ''
+        });
+        setShowExpenseModal(true);
     };
 
     const quotaPerUnit = project ? (project.total_budget / units.length) || 0 : 0;
@@ -409,63 +457,88 @@ const SpecialQuotas = () => {
     };
 
     return (
-        <div className="flex flex-col flex-1 max-w-[1400px] mx-auto w-full p-4 lg:p-10 gap-8 min-h-screen animate-fade-in text-slate-800 dark:text-slate-100">
-            {/* Page Header */}
-            <div className="flex flex-wrap justify-between items-end gap-4">
-                <div className="flex flex-col gap-1">
-                    <nav className="flex text-[10px] font-mono font-bold uppercase tracking-widest text-slate-500 mb-2 gap-2 items-center">
-                        <span className="hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer">Finanzas</span>
-                        <span>/</span>
-                        <span className="text-slate-900 dark:text-white">Gestión de Cuotas</span>
-                    </nav>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Presupuestos y Cuotas Especiales</h1>
-                    <p className="text-slate-500 text-sm mt-1 font-mono">Seguimiento financiero para el mantenimiento extraordinario.</p>
-                </div>
-                <div className="flex gap-3">
-                    <div className="flex flex-col gap-1">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Bloque Activo</span>
-                        <select
-                            value={selectedTower}
-                            onChange={(e) => {
-                                setLocalSelectedTower(e.target.value);
-                                setLastSelectedTower(e.target.value);
-                            }}
-                            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none px-4 py-2 font-mono text-sm uppercase font-bold outline-none focus:border-slate-900 dark:focus:border-white shadow-sm"
-                        >
-                            {activeTowers.map(t => <option key={t.name} value={t.name}>Torre {t.name}</option>)}
-                        </select>
+        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8 min-h-screen animate-fade-in text-slate-800 dark:text-slate-100">
+            {/* Page Header - Premium Glassmorphism */}
+            <div className="relative group p-8 rounded-[2.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden active-premium-card transition-all duration-700">
+                {/* Decorative Background Elements */}
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
+                <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/15 transition-all duration-700"></div>
+
+                <div className="relative flex flex-wrap justify-between items-center gap-8">
+                    <div className="flex flex-col gap-2">
+                        <nav className="flex items-center gap-3 text-[10px] font-display-bold uppercase tracking-[0.2em] text-emerald-600/70 dark:text-emerald-400/70 mb-1">
+                            <span className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer">Finanzas</span>
+                            <span className="opacity-30">/</span>
+                            <span className="text-slate-900 dark:text-white">Gestión de Cuotas</span>
+                        </nav>
+                        <h1 className="text-4xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight leading-none bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 dark:from-white dark:via-emerald-400 dark:to-white bg-clip-text text-transparent">
+                            Presupuestos & <span className="text-emerald-600 dark:text-emerald-500 italic">Cuotas Especiales</span>
+                        </h1>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm font-display-medium mt-1">Seguimiento financiero de alta precisión para proyectos extraordinarios.</p>
                     </div>
-                    <div className="flex items-end gap-2">
-                        <button className="flex items-center justify-center rounded-none h-[42px] px-4 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-bold uppercase tracking-widest gap-2 border border-slate-300 dark:border-slate-700 hover:border-slate-900 dark:hover:border-white transition-colors">
-                            <span className="material-icons text-sm">download</span>
-                            <span>Exportar Base</span>
-                        </button>
-                        {project && (
-                            <button
-                                onClick={() => setShowExpenseModal(true)}
-                                className="flex items-center justify-center rounded-none h-[42px] px-4 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-widest gap-2 border border-red-200 dark:border-red-900/30 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
-                            >
-                                <span className="material-icons text-sm">payments</span>
-                                <span>Reportar Gasto</span>
+
+                    <div className="flex flex-wrap items-center gap-4">
+                        {/* Tower Selector - Glass Style */}
+                        <div className="flex flex-col gap-1.5 min-w-[140px]">
+                            <span className="text-[10px] font-display-black uppercase tracking-widest text-slate-500 pl-1 dark:text-slate-400/60">Bloque Activo</span>
+                            <div className="relative">
+                                <select
+                                    value={selectedTower}
+                                    onChange={(e) => {
+                                        setLocalSelectedTower(e.target.value);
+                                        setLastSelectedTower(e.target.value);
+                                    }}
+                                    className="w-full appearance-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-2xl px-5 py-3.5 font-display-bold text-sm uppercase tracking-wider text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-xl pr-12 transition-all"
+                                >
+                                    {activeTowers.map(t => <option key={t.name} value={t.name}>Torre {t.name}</option>)}
+                                </select>
+                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none">expand_more</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-end gap-3 h-full pt-4">
+                            <button className="h-[54px] px-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-2xl text-slate-700 dark:text-slate-300 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-white dark:hover:bg-slate-700 transition-all shadow-xl active:scale-95 group">
+                                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                                    <span className="material-icons text-sm">download</span>
+                                </div>
+                                <span>Exportar</span>
                             </button>
-                        )}
-                        {project ? (
-                            <button
-                                onClick={() => setShowPaymentModal(true)}
-                                className="flex items-center justify-center rounded-none h-[42px] px-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold uppercase tracking-widest gap-2 hover:invert transition-all border-2 border-transparent"
-                            >
-                                <span className="material-icons text-sm">add_circle</span>
-                                <span>Abonar Cuota</span>
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => setShowProjectModal(true)}
-                                className="flex items-center justify-center rounded-none h-[42px] px-6 bg-emerald-700 dark:bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest gap-2 hover:bg-emerald-800 transition-colors border-2 border-transparent"
-                            >
-                                <span className="material-icons text-sm">rocket_launch</span>
-                                <span>Lanzar Proyecto</span>
-                            </button>
-                        )}
+
+                            {project && (
+                                <button
+                                    onClick={() => setShowExpenseModal(true)}
+                                    className="h-[54px] px-6 bg-rose-500/10 dark:bg-rose-500/5 backdrop-blur-md border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-rose-500 hover:text-white transition-all shadow-xl active:scale-95 group"
+                                >
+                                    <div className="p-2 bg-rose-500/20 rounded-xl group-hover:bg-white group-hover:text-rose-500 transition-all">
+                                        <span className="material-icons text-sm">payments</span>
+                                    </div>
+                                    <span>Gasto</span>
+                                </button>
+                            )}
+
+                            {project ? (
+                                <button
+                                    onClick={() => setShowPaymentModal(true)}
+                                    className="h-[54px] px-8 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(5,150,105,0.3)] hover:shadow-[0_15px_35px_rgba(5,150,105,0.4)] transition-all active:scale-95 group"
+                                >
+                                    <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-90 transition-all duration-500">
+                                        <span className="material-icons text-sm">add_circle</span>
+                                    </div>
+                                    <span>Abonar Cuota</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setShowProjectModal(true)}
+                                    className="h-[54px] px-8 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_35px_rgba(37,99,235,0.4)] transition-all active:scale-95 group"
+                                >
+                                    <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-12 transition-all">
+                                        <span className="material-icons text-sm">rocket_launch</span>
+                                    </div>
+                                    <span>Lanzar Proyecto</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -486,114 +559,167 @@ const SpecialQuotas = () => {
                 </div>
             ) : (
                 <>
-                    {/* Configuration & KPIs */}
-                    <section className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        {/* Config Panel */}
-                        <div className="xl:col-span-1 bg-white dark:bg-slate-900 p-6 rounded-none border border-slate-300 dark:border-slate-800 shadow-none relative overflow-hidden">
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 border-b-2 border-slate-900 dark:border-white inline-block pb-1">Desglose Técnico</h3>
-                            <div className="space-y-6">
+                    {/* Configuration & KPIs - Social VIVO Style */}
+                    <section className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                        {/* Config Panel - Tech Desglose */}
+                        <div className="xl:col-span-1 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden group active-premium-card">
+                            <h3 className="text-lg font-display-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
+                                <span className="p-1.5 bg-emerald-500 rounded-lg text-white material-icons text-xs">tune</span>
+                                Desglose Técnico
+                            </h3>
+                            <div className="space-y-6 relative z-10">
                                 <label className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Volumen Bruto Objetivo</span>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">$</span>
-                                        <input className="w-full pl-8 py-2 rounded-none border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white focus:border-slate-900 dark:focus:border-white outline-none font-mono font-bold text-lg" type="text" value={formatNumber(project.total_budget)} readOnly />
+                                    <span className="text-[10px] font-display-black uppercase tracking-[0.1em] text-slate-400 pl-1">Presupuesto Referencial</span>
+                                    <div className="relative group/input">
+                                        <div className="absolute inset-x-0 h-full bg-emerald-500/5 rounded-2xl group-hover/input:bg-emerald-500/10 transition-all"></div>
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-display-bold text-xl">$</span>
+                                        <input
+                                            className="w-full pl-10 pr-4 py-4 bg-transparent border-b-2 border-emerald-500/20 text-slate-900 dark:text-white font-display-bold text-2xl outline-none focus:border-emerald-500 transition-all"
+                                            type="text"
+                                            value={formatNumber(project.total_budget)}
+                                            readOnly
+                                        />
                                     </div>
                                 </label>
-                                <label className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fraccionamiento (Cuotas)</span>
-                                    <div className="px-4 py-2 rounded-none bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 font-mono font-bold text-lg text-slate-900 dark:text-white">
-                                        {project.installments_count} PARTES
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-[10px] font-display-black uppercase tracking-[0.1em] text-slate-400 pl-1">Estructura de Cuota</span>
+                                    <div className="px-5 py-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 dark:border-white/5 font-display-bold text-lg text-slate-900 dark:text-emerald-400 flex items-center justify-between">
+                                        <span>{project.installments_count} PARTES</span>
+                                        <span className="text-xs font-display-medium text-slate-400">(Tranches)</span>
                                     </div>
-                                </label>
-                                <div className="pt-4 border-t border-slate-300 dark:border-slate-800 flex flex-col gap-3 font-mono text-sm">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Denominación:</span>
-                                        <span className="font-bold text-slate-900 dark:text-white uppercase truncate max-w-[150px]">{project.name}</span>
+                                </div>
+                                <div className="pt-6 border-t border-slate-200 dark:border-white/10 flex flex-col gap-3 font-display-medium text-xs">
+                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                                        <span>Denominación:</span>
+                                        <span className="font-display-bold text-slate-900 dark:text-white uppercase truncate max-w-[140px]">{project.name}</span>
                                     </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-slate-500">Estado P/G:</span>
-                                        <span className="px-2 py-0.5 border border-slate-900 text-slate-900 dark:border-white dark:text-white text-[10px] font-bold uppercase tracking-widest">{project.status}</span>
+                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                                        <span>Estado Operativo:</span>
+                                        <span className="px-2 py-1 bg-emerald-500 text-white text-[9px] font-display-black uppercase tracking-widest rounded-md">{project.status}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* KPI Cards */}
-                        <div className="xl:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div className="flex flex-col justify-between rounded-none p-5 bg-white dark:bg-slate-900 border-t-4 border-emerald-600 border-x border-b border-slate-300 dark:border-slate-800 relative overflow-hidden">
-                                <div className="flex justify-between items-start">
-                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Recaudado</p>
-                                    <span className="text-[10px] font-mono font-bold text-emerald-600 px-2 py-0.5 border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/10 dark:border-emerald-800">{progressPercent.toFixed(1)}%</span>
+                        {/* KPI Cards Container */}
+                        <div className="xl:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                            {/* Card 1: Recaudación */}
+                            <div className="relative group p-8 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-[2.5rem] border border-emerald-500/20 shadow-xl overflow-hidden active-premium-card">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
+                                    <span className="material-icons text-7xl text-emerald-600">savings</span>
                                 </div>
-                                <div className="mt-4">
-                                    <p className="text-2xl font-mono font-black text-emerald-600">${formatNumber(totalCollected)}</p>
-                                    <p className="text-[9px] text-slate-400 font-mono mt-1">Efectivo: ${formatNumber(totalCollectedCashUSD)}</p>
+                                <div className="relative flex flex-col h-full justify-between">
+                                    <div className="flex justify-between items-start">
+                                        <div className="p-2 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/40 text-white flex items-center justify-center">
+                                            <span className="material-icons text-base">account_balance_wallet</span>
+                                        </div>
+                                        <div className="py-1 px-3 bg-emerald-500 text-white text-[10px] font-display-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/20">
+                                            {progressPercent.toFixed(1)}% RECAUDADO
+                                        </div>
+                                    </div>
+                                    <div className="mt-8">
+                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Volumen Recolectado</p>
+                                        <p className="text-4xl font-display-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">${formatNumber(totalCollected)}</p>
+                                        <div className="flex items-center gap-2 mt-3 p-2 bg-white/40 dark:bg-slate-800/40 rounded-xl border border-white/20">
+                                            <span className="material-icons text-xs text-emerald-500">payments</span>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-display-bold uppercase tracking-widest">Efectivo: ${formatNumber(totalCollectedCashUSD)}</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col justify-between rounded-none p-5 bg-white dark:bg-slate-900 border-t-4 border-red-600 border-x border-b border-slate-300 dark:border-slate-800 relative overflow-hidden">
-                                <div className="flex justify-between items-start">
-                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Ejecutado (Gastos)</p>
-                                    <span className="text-[10px] font-mono font-bold text-red-600 px-2 py-0.5 border border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800">{executionPercent.toFixed(1)}%</span>
+
+                            {/* Card 2: Ejecución */}
+                            <div className="relative group p-8 bg-gradient-to-br from-rose-500/5 to-orange-500/5 rounded-[2.5rem] border border-rose-500/20 shadow-xl overflow-hidden active-premium-card">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
+                                    <span className="material-icons text-7xl text-rose-600">engineering</span>
                                 </div>
-                                <div className="mt-4">
-                                    <p className="text-2xl font-mono font-black text-red-600">${formatNumber(totalExecuted)}</p>
-                                    <p className="text-[9px] text-slate-400 font-mono mt-1">Mat: {formatNumber(totalExecutedMaterials)} | M.O: {formatNumber(totalExecutedLabor)}</p>
+                                <div className="relative flex flex-col h-full justify-between">
+                                    <div className="flex justify-between items-start">
+                                        <div className="p-2 bg-rose-500 rounded-2xl shadow-lg shadow-rose-500/40 text-white flex items-center justify-center">
+                                            <span className="material-icons text-base">shopping_cart</span>
+                                        </div>
+                                        <div className="py-1 px-3 bg-rose-500 text-white text-[10px] font-display-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-500/20">
+                                            {executionPercent.toFixed(1)}% EJECUTADO
+                                        </div>
+                                    </div>
+                                    <div className="mt-8">
+                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Inversión Realizada</p>
+                                        <p className="text-4xl font-display-black text-rose-600 dark:text-rose-400 tracking-tight leading-none">${formatNumber(totalExecuted)}</p>
+                                        <div className="flex gap-2 mt-3">
+                                            <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-display-bold uppercase tracking-widest text-slate-500">MAT: ${formatNumber(totalExecutedMaterials)}</div>
+                                            <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-display-bold uppercase tracking-widest text-slate-500">M.O: ${formatNumber(totalExecutedLabor)}</div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div className={`flex flex-col justify-between rounded-none p-5 bg-white dark:bg-slate-900 border-t-4 ${currentCashBalance >= 0 ? 'border-amber-500' : 'border-red-800'} border-x border-b border-slate-300 dark:border-slate-800 relative overflow-hidden shadow-lg shadow-slate-200/50 dark:shadow-none`}>
-                                <div className="flex justify-between items-start">
-                                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Saldo en Caja</p>
-                                    <span className={`material-icons text-sm ${currentCashBalance >= 0 ? 'text-amber-500' : 'text-red-800'}`}>
-                                        {currentCashBalance >= 0 ? 'account_balance_wallet' : 'warning'}
-                                    </span>
-                                </div>
-                                <div className="mt-4">
-                                    <p className={`text-2xl font-mono font-black ${currentCashBalance >= 0 ? 'text-amber-600' : 'text-red-800'}`}>
-                                        ${formatNumber(Math.abs(currentCashBalance))}
-                                        {currentCashBalance < 0 && <span className="text-xs ml-1">(SOBREGIRO)</span>}
-                                    </p>
-                                    <p className="text-[9px] text-slate-400 font-mono mt-1">Fondos disponibles para ejecutar</p>
+
+                            {/* Card 3: Saldo Social Board */}
+                            <div className="relative group p-8 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-950 rounded-[2.5rem] shadow-2xl overflow-hidden active-premium-card border-t-4 border-emerald-500">
+                                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
+                                <div className="relative flex flex-col h-full justify-between">
+                                    <div className="flex justify-between items-start">
+                                        <div className="p-2 bg-white/10 rounded-2xl text-white flex items-center justify-center">
+                                            <span className="material-icons text-base">account_balance</span>
+                                        </div>
+                                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-display-black uppercase tracking-widest ${currentCashBalance >= 0 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500 text-white'}`}>
+                                            {currentCashBalance >= 0 ? 'LIQUIDEZ ALTA' : 'DÉFICIT'}
+                                        </span>
+                                    </div>
+                                    <div className="mt-8">
+                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Disponibilidad en Caja</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <p className={`text-4xl font-display-black tracking-tight leading-none ${currentCashBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+                                                ${formatNumber(Math.abs(currentCashBalance))}
+                                            </p>
+                                            {currentCashBalance < 0 && <span className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest animate-pulse">OVERDRAWN</span>}
+                                        </div>
+                                        <p className="text-[9px] text-slate-500 font-display-medium mt-3 leading-relaxed">Fondos auditados disponibles para asignación inmediata en obra.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
-                    {/* Integrated Special Quotas Ledger */}
-                    <section className="flex flex-col gap-4 mb-20 animate-fade-in">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Integración de Cobranza (Torre {selectedTower})</h2>
+                    {/* Integrated Special Quotas Ledger - Social Board Aesthetic */}
+                    <section className="flex flex-col gap-6 mb-20 animate-fade-in">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-8 bg-emerald-500 rounded-full"></div>
+                                <h2 className="text-2xl font-display-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                    Control de Cobranza <span className="text-emerald-500">Torre {selectedTower}</span>
+                                </h2>
                                 {project && (
                                     <button
                                         onClick={handleRepairData}
-                                        className="px-2 py-1 text-[8px] font-bold uppercase tracking-widest border border-slate-300 dark:border-slate-700 text-slate-500 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-colors"
+                                        className="ml-4 px-4 py-1.5 text-[9px] font-display-black uppercase tracking-widest border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all rounded-lg active:scale-95 flex items-center gap-2"
                                     >
-                                        Sincronizar Bs.
+                                        <span className="material-icons text-[10px]">sync</span>
+                                        Sincronizar Auditoría
                                     </button>
                                 )}
                             </div>
-                            <div className="flex gap-4">
-                                <span className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                    <span className="w-2 h-2 bg-emerald-500"></span> Total Pagado
+                            <div className="flex gap-6">
+                                <span className="flex items-center gap-2 text-[10px] font-display-black text-slate-400 uppercase tracking-widest">
+                                    <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div> Total Pagado
                                 </span>
-                                <span className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                    <span className="w-2 h-2 bg-red-500"></span> Pendiente
+                                <span className="flex items-center gap-2 text-[10px] font-display-black text-slate-400 uppercase tracking-widest">
+                                    <div className="w-2.5 h-2.5 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div> Pendiente
                                 </span>
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 overflow-hidden flex flex-col shadow-sm max-h-[580px] overflow-y-auto custom-scrollbar-thin">
-                            {/* Header row */}
-                            <div className="grid grid-cols-12 gap-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-300 dark:border-slate-700 px-6 py-4 hide-scrollbar overflow-x-auto sticky top-0 z-20">
-                                <div className="col-span-3 min-w-[120px] text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Identificador</div>
-                                <div className="col-span-4 min-w-[180px] text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Razón Social</div>
-                                <div className="col-span-2 min-w-[100px] text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-500 text-right">Total Pagado</div>
-                                <div className="col-span-2 min-w-[100px] text-[10px] font-bold uppercase tracking-widest text-red-600 dark:text-red-500 text-right">Deuda Pendiente</div>
-                                <div className="col-span-1 min-w-[60px] text-center text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Audit</div>
+                        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl max-h-[700px] relative group/table active-premium-card">
+                            {/* Header row - Sticky & Premium */}
+                            <div className="grid grid-cols-12 gap-4 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xl border-b border-white/20 dark:border-white/5 px-10 py-6 sticky top-0 z-30 shadow-sm">
+                                <div className="col-span-3 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Unidad Mobiliaria</div>
+                                <div className="col-span-4 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Titular / Razón Social</div>
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 text-right">Recaudado ($)</div>
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-rose-600 dark:text-rose-400 text-right">Pendiente ($)</div>
+                                <div className="col-span-1 text-center text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Audit</div>
                             </div>
 
-                            {/* Body */}
-                            <div className="flex flex-col divide-y divide-slate-200 dark:divide-slate-800">
+                            {/* Body - Virtualized style scroll */}
+                            <div className="flex flex-col divide-y divide-white/10 dark:divide-white/5 overflow-y-auto custom-scrollbar-thin">
                                 {units.map((unit) => {
                                     const unitPayments = payments.filter(p => p.unit_id === unit.id);
                                     const unitPaidAmount = unitPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
@@ -601,50 +727,70 @@ const SpecialQuotas = () => {
                                     const isExpanded = expandedUnitId === unit.id;
 
                                     return (
-                                        <div key={unit.id} className="flex flex-col transition-colors">
+                                        <div key={unit.id} className="flex flex-col group/row transition-all duration-300">
                                             {/* Main Row */}
                                             <div
-                                                className={`grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 ${isExpanded ? 'bg-slate-50 dark:bg-slate-800/80' : ''}`}
+                                                className={`grid grid-cols-12 gap-4 px-10 py-5 items-center cursor-pointer transition-all duration-300 ${isExpanded ? 'bg-emerald-500/5 dark:bg-emerald-500/10' : 'hover:bg-white/60 dark:hover:bg-white/5'}`}
                                                 onClick={() => setExpandedUnitId(isExpanded ? null : unit.id)}
                                             >
-                                                <div className="col-span-3 min-w-[120px]">
-                                                    <span className="font-black text-slate-900 dark:text-white text-sm uppercase">U-{unit.number}</span>
+                                                <div className="col-span-3 flex items-center gap-4">
+                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-display-black text-sm transition-all shadow-lg ${isExpanded ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white group-hover/row:bg-emerald-500 group-hover/row:text-white'}`}>
+                                                        {unit.number}
+                                                    </div>
+                                                    <span className="font-display-black text-slate-900 dark:text-white text-base">U-{unit.number}</span>
                                                 </div>
-                                                <div className="col-span-4 min-w-[180px] flex items-center gap-2">
-                                                    <span className="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase truncate font-mono">{unit.owners?.full_name || '--'}</span>
+                                                <div className="col-span-4 flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-display-black text-slate-500 group-hover/row:bg-emerald-500 group-hover/row:text-white transition-all">
+                                                        {unit.owners?.full_name?.charAt(0) || '?'}
+                                                    </div>
+                                                    <span className="font-display-bold text-sm text-slate-700 dark:text-slate-300 uppercase truncate max-w-[220px]">{unit.owners?.full_name || '--'}</span>
                                                 </div>
-                                                <div className="col-span-2 min-w-[100px] text-right">
-                                                    <span className={`font-black font-mono text-sm ${unitPaidAmount > 0 ? 'text-emerald-600 dark:text-emerald-500' : 'text-slate-400'}`}>
-                                                        {unitPaidAmount > 0 ? `$${formatNumber(unitPaidAmount)}` : '--'}
-                                                    </span>
+                                                <div className="col-span-2 text-right">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className={`font-display-black text-lg ${unitPaidAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                                                            ${formatNumber(unitPaidAmount)}
+                                                        </span>
+                                                        {unitPaidAmount > 0 && <span className="text-[9px] font-display-black text-emerald-500/60 uppercase tracking-widest mt-[-2px]">Validado</span>}
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-2 min-w-[100px] text-right">
-                                                    <span className={`font-black font-mono text-sm ${unitDebtAmount > 0 ? 'text-red-600 dark:text-red-500' : 'text-slate-400'}`}>
-                                                        {unitDebtAmount > 0 ? `$${formatNumber(unitDebtAmount)}` : '--'}
-                                                    </span>
+                                                <div className="col-span-2 text-right">
+                                                    <div className="flex flex-col items-end">
+                                                        <span className={`font-display-black text-lg ${unitDebtAmount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                                                            ${formatNumber(unitDebtAmount)}
+                                                        </span>
+                                                        {unitDebtAmount > 0 && <span className="text-[9px] font-display-black text-rose-500/60 uppercase tracking-widest mt-[-2px]">Pendiente</span>}
+                                                    </div>
                                                 </div>
-                                                <div className="col-span-1 min-w-[60px] flex justify-center">
-                                                    <span className={`material-icons text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180 text-slate-900 dark:text-white' : ''}`}>
-                                                        expand_more
-                                                    </span>
+                                                <div className="col-span-1 flex justify-center">
+                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isExpanded ? 'bg-emerald-500 text-white rotate-180' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover/row:text-emerald-500'}`}>
+                                                        <span className="material-icons text-lg">expand_more</span>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            {/* Expanded Audit Log */}
+                                            {/* Expanded Audit Log - Premium Detail */}
                                             {isExpanded && (
-                                                <div className="border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 p-6 shadow-inner animate-fade-in flex flex-col xl:flex-row gap-8">
+                                                <div className="border-t border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/5 p-10 shadow-inner animate-slide-up flex flex-col xl:flex-row gap-12 relative overflow-hidden">
+                                                    {/* Decorative background for detail */}
+                                                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl"></div>
+
                                                     {/* Installments Visualizer */}
-                                                    <div className="flex flex-col gap-3 min-w-[200px]">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-800 pb-2 inline-block">Liquidación de Tramos</span>
-                                                        <div className="flex gap-2 flex-wrap">
+                                                    <div className="flex flex-col gap-6 min-w-[280px] relative z-10">
+                                                        <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-4">
+                                                            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+                                                                <span className="material-icons text-sm">segment</span>
+                                                            </div>
+                                                            <span className="text-xs font-display-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Liquidación de Tramos</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-4 gap-4">
                                                             {[...Array(project.installments_count)].map((_, i) => {
                                                                 const isPaidInst = isPaid(unit.id, i + 1);
                                                                 return (
-                                                                    <div key={i} className="flex flex-col gap-1 items-center">
-                                                                        <span className="text-[9px] font-mono font-bold text-slate-400">#{i + 1}</span>
+                                                                    <div key={i} className="flex flex-col gap-2 items-center">
+                                                                        <span className="text-[10px] font-display-black text-slate-400">#{i + 1}</span>
                                                                         {isPaidInst ? (
-                                                                            <div className="w-8 h-8 bg-emerald-500 text-white flex items-center justify-center shadow-sm" title="Tramo Pagado">
-                                                                                <span className="material-icons text-[14px] font-black">check</span>
+                                                                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-110" title="Tramo Pagado">
+                                                                                <span className="material-icons text-xl">check_circle</span>
                                                                             </div>
                                                                         ) : (
                                                                             <button
@@ -658,57 +804,71 @@ const SpecialQuotas = () => {
                                                                                     });
                                                                                     setShowPaymentModal(true);
                                                                                 }}
-                                                                                className="w-8 h-8 border-2 border-slate-300 dark:border-slate-600 hover:border-slate-900 dark:hover:border-white transition-colors cursor-pointer bg-white dark:bg-slate-900 flex items-center justify-center group"
+                                                                                className="w-12 h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-500 transition-all rounded-2xl flex items-center justify-center group/btn active:scale-95 shadow-sm"
                                                                                 title="Liquidar Tramo"
                                                                             >
-                                                                                <span className="material-icons text-[16px] text-transparent group-hover:text-slate-300">add</span>
+                                                                                <span className="material-icons text-xl text-slate-300 group-hover/btn:text-emerald-500 transition-all">add_circle_outline</span>
                                                                             </button>
                                                                         )}
                                                                     </div>
                                                                 );
                                                             })}
                                                         </div>
+                                                        <div className="mt-4 p-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/40 dark:border-white/5 backdrop-blur-md">
+                                                            <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest mb-1">Monto por Tramo</p>
+                                                            <p className="text-xl font-display-black text-slate-900 dark:text-white">${formatNumber(amountPerInstallment)}</p>
+                                                        </div>
                                                     </div>
 
                                                     {/* Ledger Table */}
-                                                    <div className="flex flex-col gap-3 flex-1 overflow-x-auto">
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200 dark:border-slate-800 pb-2 inline-block">Libro Mayor Transaccional</span>
+                                                    <div className="flex flex-col gap-6 flex-1 relative z-10">
+                                                        <div className="flex items-center gap-3 border-b border-emerald-500/20 pb-4">
+                                                            <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900">
+                                                                <span className="material-icons text-sm">history_edu</span>
+                                                            </div>
+                                                            <span className="text-xs font-display-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Libro Mayor Transaccional (Unidad {unit.number})</span>
+                                                        </div>
                                                         {unitPayments.length === 0 ? (
-                                                            <div className="text-center py-6 text-slate-400 font-mono text-sm font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 border-dashed">
-                                                                No hay abonos registrados para esta unidad en este proyecto.
+                                                            <div className="flex flex-col items-center justify-center py-10 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40">
+                                                                <span className="material-icons text-4xl text-slate-300 mb-3">payments</span>
+                                                                <p className="text-xs font-display-bold text-slate-400 uppercase tracking-widest">No hay registros de abono</p>
                                                             </div>
                                                         ) : (
-                                                            <div className="min-w-[600px]">
-                                                                <table className="w-full text-left bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-                                                                    <thead className="bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
+                                                            <div className="overflow-hidden rounded-3xl border border-white/20 dark:border-white/5 shadow-2xl">
+                                                                <table className="w-full text-left bg-white/60 dark:bg-slate-900/60 backdrop-blur-md">
+                                                                    <thead className="bg-slate-900 dark:bg-slate-950 text-white">
                                                                         <tr>
-                                                                            <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 w-28">Registro</th>
-                                                                            <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-right w-32">Importe ($)</th>
-                                                                            <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 w-36">Importe (Bs.)</th>
-                                                                            <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800">Ref / Traza</th>
-                                                                            <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-500 border-r border-slate-200 dark:border-slate-800 text-center w-28">Asignación</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest">Fecha</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest text-right">Importe USD</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest">Referencia / Traza</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest text-center">Asignación</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                                                         {unitPayments.map(p => (
-                                                                            <tr key={p.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                                <td className="px-4 py-3 text-xs font-mono font-bold text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">
-                                                                                    {new Date(p.payment_date).toLocaleDateString('es-VE')}
+                                                                            <tr key={p.id} className="hover:bg-emerald-500/5 transition-all">
+                                                                                <td className="px-6 py-4">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="text-xs font-display-bold text-slate-700 dark:text-slate-300">
+                                                                                            {new Date(p.payment_date).toLocaleDateString('es-VE')}
+                                                                                        </span>
+                                                                                        <span className="text-[9px] font-display-black text-slate-400 uppercase">Procesado</span>
+                                                                                    </div>
                                                                                 </td>
-                                                                                <td className="px-4 py-3 text-xs font-mono font-black text-emerald-600 dark:text-emerald-500 text-right bg-emerald-50/30 dark:bg-emerald-900/10 border-r border-slate-100 dark:border-slate-800">
-                                                                                    ${formatNumber(p.amount)}
-                                                                                </td>
-                                                                                <td className="px-4 py-3 text-xs font-mono text-slate-600 dark:text-slate-400 border-r border-slate-100 dark:border-slate-800">
-                                                                                    {p.amount_bs ? `Bs. ${formatNumber(p.amount_bs)}` :
-                                                                                        (p.unit_payments?.amount_bs ? `Bs. ${formatNumber(p.unit_payments.amount_bs * (p.amount / (p.unit_payments.amount_usd || 1)))}*` : '--')}
-                                                                                </td>
-                                                                                <td className="px-4 py-3 text-[10px] font-mono font-bold text-slate-500 uppercase border-r border-slate-100 dark:border-slate-800">
-                                                                                    {p.reference || '--'}
-                                                                                </td>
-                                                                                <td className="px-4 py-3 text-center border-r border-slate-100 dark:border-slate-800">
-                                                                                    <span className="px-2 py-1 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white text-[9px] font-bold uppercase font-mono bg-slate-50 dark:bg-slate-800 inline-block">
-                                                                                        TRAMO {p.installment_number}
+                                                                                <td className="px-6 py-4 text-right">
+                                                                                    <span className="text-sm font-display-black text-emerald-600 dark:text-emerald-400">
+                                                                                        ${formatNumber(p.amount)}
                                                                                     </span>
+                                                                                </td>
+                                                                                <td className="px-6 py-4">
+                                                                                    <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-display-black text-slate-500 uppercase tracking-wider inline-block">
+                                                                                        {p.reference || '--'}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 text-center">
+                                                                                    <div className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-display-black uppercase tracking-[0.15em] rounded-md shadow-lg shadow-emerald-500/10 inline-block">
+                                                                                        TRAMO {p.installment_number}
+                                                                                    </div>
                                                                                 </td>
                                                                             </tr>
                                                                         ))}
@@ -724,31 +884,31 @@ const SpecialQuotas = () => {
                                 })}
                             </div>
 
-                            {/* Footer Summary */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-900 dark:bg-slate-950 text-white border-t-2 border-slate-900 px-6 py-4 items-center shadow-inner sticky bottom-0 z-20">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-0">
-                                    <span className="font-black uppercase text-[10px] tracking-widest text-slate-400">Resumen Cierre</span>
-                                    <div className="flex gap-6">
-                                        <div className="flex flex-col">
-                                            <span className="text-[8px] uppercase text-slate-500 tracking-tighter">Total en Bolívares</span>
-                                            <span className="text-white font-mono font-bold text-xs">Bs. {formatNumber(totalCollectedBs)}</span>
+                            {/* Footer Summary - Premium Sticky */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900 dark:bg-slate-950 border-t-4 border-emerald-500 px-12 py-8 items-center sticky bottom-0 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+                                <div className="flex items-center gap-10">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-display-black uppercase text-emerald-500 tracking-[0.25em] mb-1">Métrica Recopilada</span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-3xl font-display-black text-white">${formatNumber(totalCollected)}</span>
+                                            <span className="text-xs font-display-bold text-slate-500 uppercase">USD TOTAL</span>
                                         </div>
-                                        <div className="w-[1px] bg-slate-700 self-stretch"></div>
-                                        <div className="flex flex-col">
-                                            <span className="text-[8px] uppercase text-slate-500 tracking-tighter">Acumulado Efectivo ($)</span>
-                                            <span className="text-emerald-400 font-mono font-black text-xs">${formatNumber(totalCollectedCashUSD)}</span>
+                                    </div>
+                                    <div className="h-12 w-[1px] bg-white/10"></div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-display-black uppercase text-slate-500 tracking-[0.25em] mb-1">Caja Efectivo</span>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className="text-2xl font-display-black text-emerald-400/90">${formatNumber(totalCollectedCashUSD)}</span>
+                                            <span className="text-[9px] font-display-black text-slate-500 uppercase tracking-widest">In-Caja</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex justify-start md:justify-end border-t md:border-t-0 border-slate-800 pt-4 md:pt-0">
-                                    <div className="grid grid-cols-2 gap-8 items-center text-right">
-                                        <div className="flex flex-col items-end border-r border-slate-700 pr-8">
-                                            <span className="text-[8px] uppercase text-slate-500 tracking-tighter mb-1">Total Pagado</span>
-                                            <span className="font-black font-mono text-emerald-400 text-xl">${formatNumber(totalCollected)}</span>
-                                        </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-[8px] uppercase text-slate-500 tracking-tighter mb-1">Morosidad Global</span>
-                                            <span className="font-black font-mono text-red-400 text-xl">${formatNumber(remainingBudget)}</span>
+                                <div className="flex justify-end gap-12">
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] font-display-black uppercase text-rose-500 tracking-[0.25em] mb-1">Diferencial Moroso</span>
+                                        <div className="flex items-baseline gap-3">
+                                            <span className="text-3xl font-display-black text-rose-500">${formatNumber(remainingBudget)}</span>
+                                            <div className="p-1.5 bg-rose-500 rounded-lg text-white material-icons text-xs">trending_down</div>
                                         </div>
                                     </div>
                                 </div>
@@ -756,59 +916,103 @@ const SpecialQuotas = () => {
                         </div>
                     </section>
 
-                    {/* Expenses Relationship Section */}
-                    <section className="flex flex-col gap-4 animate-fade-in mb-20">
+                    {/* Expenses Relationship Section - Social Board Aesthetic */}
+                    <section className="flex flex-col gap-6 animate-fade-in mb-20 px-2">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-black uppercase tracking-tight text-slate-900 dark:text-white">Relación de Ejecución (Egresos)</h2>
-                            <div className="flex gap-4 font-mono text-[10px] uppercase font-bold text-slate-500">
-                                <span>Materiales: <span className="text-slate-900 dark:text-white">${formatNumber(totalExecutedMaterials)}</span></span>
-                                <span>Mano de Obra: <span className="text-slate-900 dark:text-white">${formatNumber(totalExecutedLabor)}</span></span>
+                            <div className="flex items-center gap-4">
+                                <div className="w-1.5 h-8 bg-rose-500 rounded-full"></div>
+                                <h2 className="text-2xl font-display-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                    Relación de Ejecución <span className="text-rose-500">(Egresos)</span>
+                                </h2>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                    <span className="text-[10px] font-display-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Materiales:</span>
+                                    <span className="text-sm font-display-black text-slate-900 dark:text-white">${formatNumber(totalExecutedMaterials)}</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                                    <span className="text-[10px] font-display-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">Mano de Obra:</span>
+                                    <span className="text-sm font-display-black text-slate-900 dark:text-white">${formatNumber(totalExecutedLabor)}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 overflow-hidden flex flex-col shadow-sm">
-                            <div className="grid grid-cols-12 gap-4 bg-slate-100 dark:bg-slate-950 border-b border-slate-300 dark:border-slate-700 px-6 py-4">
-                                <div className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Fecha</div>
-                                <div className="col-span-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">Descripción</div>
-                                <div className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">Categoría</div>
-                                <div className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Monto (Bs.)</div>
-                                <div className="col-span-2 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Equiv. USD</div>
-                                <div className="col-span-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Ref</div>
+                        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative group/table active-premium-card">
+                            <div className="grid grid-cols-12 gap-4 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xl border-b border-white/20 dark:border-white/5 px-10 py-6 sticky top-0 z-10">
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Fecha</div>
+                                <div className="col-span-3 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Descripción / Concepto</div>
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-center">Categoría</div>
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-right">Importe USD</div>
+                                <div className="col-span-1 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-right">Referencia</div>
+                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-center">Acciones</div>
                             </div>
-                            <div className="flex flex-col divide-y divide-slate-200 dark:divide-slate-800 max-h-[400px] overflow-y-auto">
+                            <div className="flex flex-col divide-y divide-white/10 dark:divide-white/5 max-h-[500px] overflow-y-auto custom-scrollbar-thin">
                                 {projectExpenses.length === 0 ? (
-                                    <div className="px-6 py-12 text-center text-slate-400 font-mono text-sm uppercase">Sin egresos registrados para este proyecto.</div>
+                                    <div className="flex flex-col items-center justify-center py-20 opacity-40">
+                                        <span className="material-icons text-5xl mb-4">inventory_2</span>
+                                        <p className="text-sm font-display-bold uppercase tracking-[0.2em]">Sin registros de ejecución</p>
+                                    </div>
                                 ) : (
                                     projectExpenses.map((exp) => (
-                                        <div key={exp.id} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                            <div className="col-span-2 font-mono text-xs text-slate-500">{exp.date}</div>
-                                            <div className="col-span-3 font-bold text-xs text-slate-900 dark:text-white uppercase">{exp.description}</div>
+                                        <div key={exp.id} className="grid grid-cols-12 gap-4 px-10 py-5 items-center hover:bg-white/60 dark:hover:bg-white/5 transition-all duration-300 group/row">
                                             <div className="col-span-2">
-                                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest border ${exp.category === 'MATERIALES' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                    exp.category === 'MANO DE OBRA' ? 'bg-purple-50 text-purple-600 border-purple-100' :
-                                                        'bg-slate-50 text-slate-600 border-slate-100'
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-display-bold text-slate-500">{exp.date}</span>
+                                                    <span className="text-[9px] font-display-black text-rose-500/60 uppercase tracking-widest mt-0.5">Egreso</span>
+                                                </div>
+                                            </div>
+                                            <div className="col-span-3">
+                                                <span className="font-display-bold text-sm text-slate-900 dark:text-white uppercase leading-tight">{exp.description}</span>
+                                            </div>
+                                            <div className="col-span-2 flex justify-center">
+                                                <span className={`px-4 py-1.5 text-[9px] font-display-black uppercase tracking-[0.15em] rounded-full shadow-lg border-2 ${exp.category === 'MATERIALES' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20 shadow-blue-500/5' :
+                                                    exp.category === 'MANO DE OBRA' ? 'bg-purple-500/10 text-purple-600 border-purple-500/20 shadow-purple-500/5' :
+                                                        'bg-slate-500/10 text-slate-600 border-slate-500/20 shadow-slate-500/5'
                                                     }`}>
                                                     {exp.category}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 text-right">
-                                                <span className="font-black font-mono text-sm text-slate-900 dark:text-white">Bs. {formatNumber(exp.amount_bs)}</span>
-                                                <p className="text-[9px] text-slate-400 font-mono">@{formatNumber(exp.bcv_rate)}</p>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-base font-display-black text-rose-600 dark:text-rose-400">${formatNumber(exp.amount_usd)}</span>
+                                                    <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-tighter">Bs. {formatNumber(exp.amount_bs)} · @{formatNumber(exp.bcv_rate)}</span>
+                                                </div>
                                             </div>
-                                            <div className="col-span-2 text-right font-black font-mono text-sm text-emerald-600">
-                                                ${formatNumber(exp.amount_usd)}
+                                            <div className="col-span-1 text-right">
+                                                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-display-black text-slate-500 uppercase tracking-wider inline-block">
+                                                    {exp.reference || '--'}
+                                                </div>
                                             </div>
-                                            <div className="col-span-1 text-right font-mono text-[10px] text-slate-400 truncate">
-                                                {exp.reference || '--'}
+                                            <div className="col-span-2 flex justify-center gap-2">
+                                                <button
+                                                    onClick={() => openEditModal(exp)}
+                                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/5"
+                                                    title="Editar Egreso"
+                                                >
+                                                    <span className="material-icons text-sm">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteExpense(exp.id)}
+                                                    className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-rose-500/5"
+                                                    title="Eliminar Egreso"
+                                                >
+                                                    <span className="material-icons text-sm">delete</span>
+                                                </button>
                                             </div>
                                         </div>
                                     ))
                                 )}
                             </div>
                             {projectExpenses.length > 0 && (
-                                <div className="bg-slate-900 dark:bg-slate-950 px-6 py-3 flex justify-between items-center text-white font-mono">
-                                    <span className="text-[10px] font-black uppercase tracking-widest opacity-50">Total Ejecutado Acumulado</span>
-                                    <span className="font-black text-lg">${formatNumber(totalExecuted)}</span>
+                                <div className="bg-slate-900 dark:bg-slate-950 border-t-4 border-rose-500 px-12 py-8 flex justify-between items-center sticky bottom-0 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-display-black uppercase text-rose-500 tracking-[0.25em] mb-1">Inversión Ejecutada</span>
+                                        <p className="text-[9px] text-slate-500 font-display-medium uppercase max-w-[200px]">Total de capital amortizado en mano de obra y suministros</p>
+                                    </div>
+                                    <div className="flex items-baseline gap-3">
+                                        <span className="text-4xl font-display-black text-white">${formatNumber(totalExecuted)}</span>
+                                        <span className="text-xs font-display-bold text-rose-500 uppercase">USD TOTAL</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -816,197 +1020,251 @@ const SpecialQuotas = () => {
                 </>
             )}
 
-            {/* Modal: Nuevo Proyecto */}
+            {/* Modal: Nuevo Proyecto - Social VIVO Premium */}
             {showProjectModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 border-2 border-slate-900 dark:border-slate-700 rounded-none w-full max-w-md shadow-2xl">
-                        <div className="p-6 border-b-2 border-slate-900 dark:border-slate-700 bg-slate-50 dark:bg-slate-950">
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Formular Nuevo Presupuesto</h3>
-                            <p className="font-mono text-xs text-slate-500 mt-2">Defina el requerimiento de capital para el bloque {selectedTower}.</p>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
+                        {/* Decorative header blur */}
+                        <div className="absolute top-0 inset-x-0 h-32 bg-emerald-500/10 blur-3xl -z-10"></div>
+
+                        <div className="p-10 border-b border-slate-200 dark:border-slate-800/50">
+                            <div className="flex items-center gap-5 mb-4">
+                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl shadow-emerald-500/20">
+                                    <span className="material-icons text-3xl">rocket_launch</span>
+                                </div>
+                                <div>
+                                    <h3 className="text-3xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">Nueva Iniciativa</h3>
+                                    <p className="text-xs font-display-medium text-emerald-500 uppercase tracking-widest mt-1">Planificación de Capital Torre {selectedTower}</p>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 font-display-medium leading-relaxed">
+                                Formule un nuevo requerimiento presupuestario para la comunidad. Los fondos serán prorrateados según el número de tramos definido.
+                            </p>
                         </div>
-                        <div className="p-6 space-y-5 text-slate-700 dark:text-slate-300">
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Designación del Requerimiento</span>
-                                <input
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                    placeholder="EJ: IMPERMEABILIZACIÓN ESTRUCTURA"
-                                    value={newProject.name}
-                                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Capital Necesario (Base USD)</span>
-                                <input
-                                    type="number"
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                    placeholder="00.00"
-                                    value={newProject.total_budget}
-                                    onChange={(e) => setNewProject({ ...newProject, total_budget: e.target.value })}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Amortización (Tramos)</span>
-                                <select
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                    value={newProject.installments_count}
-                                    onChange={(e) => setNewProject({ ...newProject, installments_count: e.target.value })}
-                                >
-                                    <option value="1">Ejecución Única (1)</option>
-                                    <option value="2">Bimestral (2)</option>
-                                    <option value="3">Trimestral (3)</option>
-                                    <option value="4">Cuatrimestral (4)</option>
-                                    <option value="6">Semestral (6)</option>
-                                    <option value="12">Anualizado (12)</option>
-                                </select>
-                            </label>
+
+                        <div className="p-10 space-y-8">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Designación del Proyecto</label>
+                                <div className="relative">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-500 material-icons">assignment</span>
+                                    <input
+                                        className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-bold text-base text-slate-900 dark:text-white transition-all placeholder:text-slate-300"
+                                        placeholder="EJ: MODERNIZACIÓN DE ASCENSORES"
+                                        value={newProject.name}
+                                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value.toUpperCase() })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Inversión (USD)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-display-black text-emerald-500">$</span>
+                                        <input
+                                            type="number"
+                                            className="w-full pl-10 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-black text-xl text-slate-900 dark:text-white transition-all"
+                                            placeholder="0,00"
+                                            value={newProject.total_budget}
+                                            onChange={(e) => setNewProject({ ...newProject, total_budget: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Amortización / Tramos</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-sm">segment</span>
+                                        <select
+                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
+                                            value={newProject.installments_count}
+                                            onChange={(e) => setNewProject({ ...newProject, installments_count: e.target.value })}
+                                        >
+                                            <option value="1">Ejecución Única (1)</option>
+                                            <option value="2">Bimestral (2)</option>
+                                            <option value="3">Trimestral (3)</option>
+                                            <option value="4">Cuatrimestral (4)</option>
+                                            <option value="6">Semestral (6)</option>
+                                            <option value="12">Anualizado (12)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex gap-3">
+
+                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
                             <button
                                 onClick={() => setShowProjectModal(false)}
-                                className="flex-1 py-3 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-none font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:border-slate-900 dark:hover:border-white transition-colors"
+                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
                             >
-                                ABORTAR
+                                CANCELAR
                             </button>
                             <button
                                 onClick={handleCreateProject}
-                                className="flex-1 py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-none font-bold text-xs uppercase tracking-widest hover:invert transition-all border-2 border-transparent"
+                                className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
                             >
-                                EJECUTAR INICIATIVA
+                                LANZAR PROYECTO
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal: Registrar Pago */}
+            {/* Modal: Registrar Pago (Liquidación) - Social VIVO Premium */}
             {showPaymentModal && project && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 border-2 border-slate-900 dark:border-slate-700 rounded-none w-full max-w-md shadow-2xl">
-                        <div className="p-6 border-b-2 border-slate-900 dark:border-slate-700 bg-slate-50 dark:bg-slate-950">
-                            <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Liquidación de Fracción</h3>
-                            <div className="font-mono text-xs text-slate-500 mt-2 flex items-center gap-2">
-                                <span className="px-2 py-0.5 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900">
-                                    {selectedUnitForPayment ? `U-${selectedUnitForPayment.number}` : '---'}
-                                </span>
-                                <span>·</span>
-                                <span className="font-bold">TRAMO {paymentDetails.installment_number}</span>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
+
+                        <div className="p-10 border-b border-slate-200 dark:border-slate-800/50">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                                        <span className="material-icons">receipt_long</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight">Liquidación</h3>
+                                        <p className="text-[10px] font-display-black text-emerald-500 uppercase tracking-widest">Abono a Cuota Especial</p>
+                                    </div>
+                                </div>
+                                <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <span className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest block leading-none mb-1">Tramo</span>
+                                    <span className="text-sm font-display-black text-slate-900 dark:text-white uppercase">NIVEL {paymentDetails.installment_number}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-3 p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                                    <span className="material-icons text-sm">home</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Unidad Beneficiaria</span>
+                                    <span className="text-sm font-display-bold text-slate-900 dark:text-white">
+                                        {selectedUnitForPayment ? `U-${selectedUnitForPayment.number} · ${selectedUnitForPayment.owners?.full_name}` : 'Pendiente de Selección'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                        <div className="p-6 space-y-5">
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Fecha de Operación</span>
-                                <input
-                                    type="date"
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                    value={paymentDetails.payment_date}
-                                    onChange={(e) => setPaymentDetails({ ...paymentDetails, payment_date: e.target.value })}
-                                />
-                            </label>
 
-                            {!selectedUnitForPayment ? (
-                                <label className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Clave de Unidad</span>
-                                    <select
-                                        className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                        onChange={(e) => setSelectedUnitForPayment(units.find(u => u.id === e.target.value))}
-                                    >
-                                        <option value="">Seleccionar Base...</option>
-                                        {units.map(u => <option key={u.id} value={u.id}>U-{u.number} · {u.owners?.full_name}</option>)}
-                                    </select>
-                                </label>
-                            ) : null}
-                            <div className="flex gap-2 bg-slate-50 dark:bg-slate-800/50 p-1 border border-slate-300 dark:border-slate-700">
+                        <div className="p-10 space-y-8">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Valor</label>
+                                    <input
+                                        type="date"
+                                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all"
+                                        value={paymentDetails.payment_date}
+                                        onChange={(e) => setPaymentDetails({ ...paymentDetails, payment_date: e.target.value })}
+                                    />
+                                </div>
+                                {!selectedUnitForPayment && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Unidad</label>
+                                        <select
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
+                                            onChange={(e) => setSelectedUnitForPayment(units.find(u => u.id === e.target.value))}
+                                        >
+                                            <option value="">Seleccionar...</option>
+                                            {units.map(u => <option key={u.id} value={u.id}>U-{u.number}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-[1.5rem] border border-slate-200 dark:border-slate-700/30">
                                 <button
                                     onClick={() => setPaymentDetails({ ...paymentDetails, payment_method: 'TRANSFER' })}
-                                    className={`flex-1 py-3 px-2 text-[10px] font-mono font-black tracking-widest uppercase transition-colors flex items-center justify-center gap-2 border-2 ${paymentDetails.payment_method === 'TRANSFER'
-                                        ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900 dark:border-white shadow-none'
-                                        : 'border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'
-                                        }`}
+                                    className={`flex-1 py-4 px-2 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 ${paymentDetails.payment_method === 'TRANSFER'
+                                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl shadow-black/5 border border-slate-200 dark:border-slate-600'
+                                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 >
-                                    <span className="material-icons text-sm">account_balance</span> BANCO
+                                    <span className="material-icons text-lg">account_balance</span>
+                                    <span className="text-[10px] font-display-black uppercase tracking-widest">Transferencia</span>
                                 </button>
                                 <button
                                     onClick={() => setPaymentDetails({ ...paymentDetails, payment_method: 'CASH' })}
-                                    className={`flex-1 py-3 px-2 text-[10px] font-mono font-black tracking-widest uppercase transition-colors flex items-center justify-center gap-2 border-2 ${paymentDetails.payment_method === 'CASH'
-                                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-none'
-                                        : 'border-transparent text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'
-                                        }`}
+                                    className={`flex-1 py-4 px-2 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 ${paymentDetails.payment_method === 'CASH'
+                                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-xl shadow-black/5 border border-slate-200 dark:border-slate-600'
+                                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 >
-                                    <span className="material-icons text-sm">payments</span> DIVISAS
+                                    <span className="material-icons text-lg">payments</span>
+                                    <span className="text-[10px] font-display-black uppercase tracking-widest">Efectivo</span>
                                 </button>
                             </div>
 
-                            {paymentDetails.payment_method === 'TRANSFER' ? (
-                                <>
-                                    <label className="flex flex-col gap-2">
-                                        <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Emisión Regulada (Bs.)</span>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">Bs.</span>
-                                            <input
-                                                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-black text-xl text-slate-900 dark:text-white transition-colors"
-                                                type="number"
-                                                placeholder="0.00"
-                                                value={paymentDetails.amount_bs}
-                                                onChange={(e) => {
-                                                    const bs = e.target.value;
-                                                    const usd = paymentDetails.bcv_rate > 0 ? (parseFloat(bs) / paymentDetails.bcv_rate).toFixed(2) : paymentDetails.amount;
-                                                    setPaymentDetails({ ...paymentDetails, amount_bs: bs, amount: usd });
-                                                }}
-                                            />
+                            <div className="space-y-6">
+                                {paymentDetails.payment_method === 'TRANSFER' && (
+                                    <div className="grid grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-950/20 rounded-3xl border border-slate-200 dark:border-slate-800 animate-slide-up">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest ml-2">Monto Bs.</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-display-bold text-xs uppercase">Bs.</span>
+                                                <input
+                                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-black text-xl text-slate-900 dark:text-white"
+                                                    type="number"
+                                                    value={paymentDetails.amount_bs}
+                                                    onChange={(e) => {
+                                                        const bs = e.target.value;
+                                                        const usd = paymentDetails.bcv_rate > 0 ? (parseFloat(bs) / paymentDetails.bcv_rate).toFixed(2) : paymentDetails.amount;
+                                                        setPaymentDetails({ ...paymentDetails, amount_bs: bs, amount: usd });
+                                                    }}
+                                                />
+                                            </div>
                                         </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest ml-2">Tasa BCV</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-black text-xl text-emerald-600 dark:text-emerald-400"
+                                                    value={paymentDetails.bcv_rate}
+                                                    onChange={(e) => setPaymentDetails({ ...paymentDetails, bcv_rate: e.target.value })}
+                                                />
+                                                {loadingRate && <span className="absolute right-4 top-1/2 -translate-y-1/2 material-icons text-xs animate-spin text-slate-400">sync</span>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-emerald-600 dark:text-emerald-400 uppercase ml-2">
+                                        {paymentDetails.payment_method === 'CASH' ? 'Importe Recibido (USD)' : 'Convertido a Divisa (USD)'}
                                     </label>
-                                    <div className="bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tasa BCV Referencial</span>
-                                            {loadingRate && <span className="material-icons text-xs animate-spin">sync</span>}
-                                        </div>
+                                    <div className="relative group/input">
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-display-black text-2xl text-emerald-500">$</span>
                                         <input
+                                            className={`w-full pl-12 pr-6 py-6 bg-emerald-500/5 border-2 rounded-3xl focus:outline-none font-display-black text-3xl transition-all ${paymentDetails.payment_method === 'CASH' ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-slate-200 dark:border-slate-700'
+                                                } text-emerald-600 dark:text-emerald-400`}
                                             type="number"
-                                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none font-mono font-bold text-sm outline-none"
-                                            value={paymentDetails.bcv_rate}
-                                            onChange={(e) => setPaymentDetails({ ...paymentDetails, bcv_rate: e.target.value })}
+                                            value={paymentDetails.amount}
+                                            onChange={(e) => setPaymentDetails({ ...paymentDetails, amount: e.target.value })}
                                         />
                                     </div>
-                                </>
-                            ) : null}
+                                </div>
 
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">
-                                    {paymentDetails.payment_method === 'CASH' ? 'Valor Liquidado (USD)' : 'Equivalente Final (USD)'}
-                                </span>
-                                <input
-                                    className={`px-4 py-3 border-2 rounded-none focus:outline-none focus:ring-0 font-mono font-black text-lg transition-colors ${paymentDetails.payment_method === 'CASH'
-                                        ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-500 text-emerald-700 dark:text-emerald-400'
-                                        : 'bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white'
-                                        }`}
-                                    type="number"
-                                    value={paymentDetails.amount}
-                                    onChange={(e) => setPaymentDetails({ ...paymentDetails, amount: e.target.value })}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Código Rastro Operativo (Ref)</span>
-                                <input
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white transition-colors"
-                                    placeholder="OPCIONAL"
-                                    value={paymentDetails.reference}
-                                    onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value })}
-                                />
-                            </label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Referencia / Traza</label>
+                                    <input
+                                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300"
+                                        placeholder="PAGO MÓVIL / EFECTIVO / OTRO"
+                                        value={paymentDetails.reference}
+                                        onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value.toUpperCase() })}
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex gap-3">
+
+                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
                             <button
                                 onClick={() => {
                                     setShowPaymentModal(false);
                                     setSelectedUnitForPayment(null);
                                 }}
-                                className="flex-1 py-3 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-none font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:border-slate-900 dark:hover:border-white transition-colors"
+                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
                             >
-                                ABORTAR
+                                CANCELAR
                             </button>
                             <button
                                 onClick={handleRegisterPayment}
-                                className="flex-1 py-3 bg-emerald-600 text-white rounded-none font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-colors border border-transparent"
+                                className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
                             >
                                 ASENTAR LIQUIDACIÓN
                             </button>
@@ -1014,108 +1272,157 @@ const SpecialQuotas = () => {
                     </div>
                 </div>
             )}
-            {/* Expense Registration Modal */}
+            {/* Expense Registration Modal - Social VIVO Premium */}
             {showExpenseModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-md shadow-2xl border border-slate-300 dark:border-slate-700 animate-slide-up">
-                        <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-red-600 flex items-center justify-center text-white shadow-lg">
-                                    <span className="material-icons text-xl">payments</span>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
+
+                        <div className="absolute top-0 inset-x-0 h-32 bg-rose-500/10 blur-3xl -z-10"></div>
+
+                        <div className="p-10 border-b border-slate-200 dark:border-slate-800/50">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-rose-500 to-red-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-rose-500/20">
+                                        <span className="material-icons">payments</span>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                            {editingExpenseId ? 'Editar Egreso' : 'Reportar Egreso'}
+                                        </h3>
+                                        <p className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest">Liquidación del Capital Social</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Reportar Egreso</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Liquidación de gastos del proyecto</p>
-                                </div>
+                                <button onClick={() => {
+                                    setShowExpenseModal(false);
+                                    setEditingExpenseId(null);
+                                    setNewExpense({
+                                        description: '',
+                                        category: 'MATERIALES',
+                                        amount_bs: '',
+                                        bcv_rate: 0,
+                                        amount_usd: '',
+                                        date: new Date().toISOString().split('T')[0],
+                                        reference: ''
+                                    });
+                                }} className="w-10 h-10 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-all">
+                                    <span className="material-icons text-xl">close</span>
+                                </button>
                             </div>
-                            <button onClick={() => setShowExpenseModal(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                                <span className="material-icons">close</span>
-                            </button>
                         </div>
-                        <div className="p-6 space-y-5">
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Descripción del Gasto</span>
-                                <input
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-300"
-                                    placeholder="EJ: COMPRA DE CEMENTO, PAGO PINTURA..."
-                                    value={newExpense.description}
-                                    onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value.toUpperCase() })}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Categoría</span>
-                                <select
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white uppercase cursor-pointer"
-                                    value={newExpense.category}
-                                    onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
-                                >
-                                    <option value="MATERIALES">MATERIALES</option>
-                                    <option value="MANO DE OBRA">MANO DE OBRA</option>
-                                    <option value="OTROS">OTROS</option>
-                                </select>
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Fecha de Compra</span>
-                                <input
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white"
-                                    type="date"
-                                    value={newExpense.date}
-                                    onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
-                                />
-                            </label>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Monto Pagado (Bs.)</span>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-mono font-bold">Bs.</span>
-                                    <input
-                                        className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-black text-xl text-slate-900 dark:text-white"
-                                        type="number"
-                                        placeholder="0.00"
-                                        value={newExpense.amount_bs}
-                                        onChange={(e) => {
-                                            const bs = e.target.value;
-                                            const usd = newExpense.bcv_rate > 0 ? (parseFloat(bs) / newExpense.bcv_rate).toFixed(2) : '';
-                                            setNewExpense({ ...newExpense, amount_bs: bs, amount_usd: usd });
-                                        }}
-                                    />
+
+                        <div className="p-10 space-y-8">
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Descripción / Concepto</label>
+                                    <div className="relative">
+                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-rose-500 material-icons">description</span>
+                                        <input
+                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all placeholder:text-slate-300"
+                                            placeholder="EJ: COMPRA DE MATERIALES DE PINTURA"
+                                            value={newExpense.description}
+                                            onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value.toUpperCase() })}
+                                        />
+                                    </div>
                                 </div>
-                            </label>
-                            <div className="bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800 flex flex-col gap-3">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Tasa BCV del Día</span>
-                                    {loadingExpenseRate && <span className="material-icons text-xs animate-spin text-slate-400">sync</span>}
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="font-mono font-bold text-sm text-slate-600 dark:text-slate-300">
-                                        {newExpense.bcv_rate > 0 ? `Bs. ${formatNumber(newExpense.bcv_rate)} / $1` : 'Cargando...'}
-                                    </span>
-                                    <span className="font-mono font-black text-lg text-emerald-600">
-                                        {newExpense.amount_usd ? `≈ $${formatNumber(parseFloat(newExpense.amount_usd))}` : '—'}
-                                    </span>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Categoría</label>
+                                        <select
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer uppercase"
+                                            value={newExpense.category}
+                                            onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
+                                        >
+                                            <option value="MATERIALES">MATERIALES</option>
+                                            <option value="MANO DE OBRA">MANO DE OBRA</option>
+                                            <option value="OTROS">OTROS</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Compra</label>
+                                        <input
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all"
+                                            type="date"
+                                            value={newExpense.date}
+                                            onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                            <label className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black tracking-widest text-slate-500 uppercase">Referencia / Nro. Factura</span>
+
+                            <div className="p-8 bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest ml-2">Monto Ejecutado (Bs.)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-display-black text-rose-500">Bs.</span>
+                                        <input
+                                            className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-900 border border-rose-500/20 rounded-2xl focus:outline-none focus:border-rose-500 font-display-black text-2xl text-slate-900 dark:text-white shadow-xl shadow-rose-500/5"
+                                            type="number"
+                                            placeholder="0,00"
+                                            value={newExpense.amount_bs}
+                                            onChange={(e) => {
+                                                const bs = e.target.value;
+                                                const usd = newExpense.bcv_rate > 0 ? (parseFloat(bs) / newExpense.bcv_rate).toFixed(2) : '';
+                                                setNewExpense({ ...newExpense, amount_bs: bs, amount_usd: usd });
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-between items-center p-4 bg-white/40 dark:bg-slate-800/40 rounded-2xl border border-white/20">
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Equivalencia Final</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl font-display-black text-emerald-600 dark:text-emerald-400">
+                                                {newExpense.amount_usd ? `$${formatNumber(parseFloat(newExpense.amount_usd))}` : '—'}
+                                            </span>
+                                            {loadingExpenseRate && <span className="material-icons text-xs animate-spin text-emerald-500">sync</span>}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Tasa BCV Aplicada</span>
+                                        <p className="font-display-bold text-sm text-slate-700 dark:text-slate-300">
+                                            {newExpense.bcv_rate > 0 ? `Bs. ${formatNumber(newExpense.bcv_rate)}` : '...'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Garantía / PDF / Factura</label>
                                 <input
-                                    className="px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none focus:outline-none focus:border-slate-900 dark:focus:border-white font-mono font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-300"
-                                    placeholder="OBSERVACIONES O NRO FACTURA"
+                                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300"
+                                    placeholder="NRO FACTURA O REFERENCIA PAGO"
                                     value={newExpense.reference}
                                     onChange={(e) => setNewExpense({ ...newExpense, reference: e.target.value.toUpperCase() })}
                                 />
-                            </label>
+                            </div>
                         </div>
-                        <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex gap-3">
+
+                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
                             <button
-                                onClick={() => setShowExpenseModal(false)}
-                                className="flex-1 py-3 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-none font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:border-slate-900 dark:hover:border-white transition-colors"
+                                onClick={() => {
+                                    setShowExpenseModal(false);
+                                    setEditingExpenseId(null);
+                                    setNewExpense({
+                                        description: '',
+                                        category: 'MATERIALES',
+                                        amount_bs: '',
+                                        bcv_rate: 0,
+                                        amount_usd: '',
+                                        date: new Date().toISOString().split('T')[0],
+                                        reference: ''
+                                    });
+                                }}
+                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
                             >
                                 CANCELAR
                             </button>
                             <button
                                 onClick={handleRegisterExpense}
-                                className="flex-1 py-3 bg-red-600 text-white rounded-none font-bold text-xs uppercase tracking-widest hover:bg-red-700 transition-colors border border-transparent shadow-lg shadow-red-200"
+                                className="flex-[2] py-4 bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
                             >
-                                REGISTRAR EGRESO
+                                {editingExpenseId ? 'GUARDAR CAMBIOS' : 'REGISTRAR EGRESO'}
                             </button>
                         </div>
                     </div>

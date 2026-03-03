@@ -31,48 +31,57 @@ const Header = ({ title = "Resumen General" }) => {
     };
 
     return (
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-50">
-            <div className="flex items-center gap-4">
-                <button className="lg:hidden text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+        <header className="h-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-10 sticky top-0 z-50">
+            <div className="flex items-center gap-6">
+                <button className="lg:hidden text-slate-500 hover:text-emerald-500 p-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all">
                     <span className="material-icons">menu</span>
                 </button>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-white">{title}</h2>
+                <div className="space-y-0.5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600/60 dark:text-emerald-400/60">Operativo · Live</p>
+                    <h2 className="text-2xl font-display-bold text-slate-800 dark:text-white tracking-tight">{title}</h2>
+                </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
                 <ThemeToggle />
-                <button className="w-10 h-10 flex items-center justify-center text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-full relative transition-colors">
-                    <span className="material-icons">notifications</span>
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></span>
+
+                <button className="w-12 h-12 flex items-center justify-center text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-2xl relative transition-all group">
+                    <span className="material-icons group-hover:scale-110 transition-transform">notifications</span>
+                    <span className="absolute top-3.5 right-3.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-slate-900 shadow-sm animate-pulse"></span>
                 </button>
 
                 {/* Dropdown de Acciones Rápidas */}
                 <div className="relative" ref={dropdownRef}>
                     <button
                         onClick={() => setIsOpen(!isOpen)}
-                        className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-slate-800 transition-all shadow-none cursor-pointer border border-transparent dark:hover:bg-white"
+                        className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center gap-3 hover:shadow-xl hover:shadow-emerald-500/20 active:scale-95 transition-all"
                     >
-                        <span className="material-icons text-sm">{isOpen ? 'close' : 'add'}</span>
-                        Nuevo Registro
+                        <span className="material-icons text-sm">{isOpen ? 'close' : 'bolt'}</span>
+                        Acción Rápida
                     </button>
 
                     {isOpen && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-none shadow-sm py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50">
-                            <div className="px-4 py-2 border-b border-slate-50 dark:border-slate-800">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Acceso Rápido</p>
+                        <div className="absolute right-0 mt-4 w-64 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-700/50 rounded-[2rem] shadow-2xl shadow-slate-200 dark:shadow-none p-2 animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 z-50 overflow-hidden">
+                            <div className="px-5 py-3 border-b border-slate-50 dark:border-slate-800/50">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Centro de Control</p>
                             </div>
-                            {actions.map((action, idx) => (
-                                <button
-                                    key={idx}
-                                    onClick={() => handleAction(action.path)}
-                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left group"
-                                >
-                                    <div className={`w-8 h-8 rounded-lg ${action.bg} ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                        <span className="material-icons text-sm">{action.icon}</span>
-                                    </div>
-                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{action.label}</span>
-                                </button>
-                            ))}
+                            <div className="py-1">
+                                {actions.map((action, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => handleAction(action.path)}
+                                        className="w-full flex items-center gap-4 px-4 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-2xl transition-all text-left group"
+                                    >
+                                        <div className={`w-10 h-10 rounded-xl ${action.bg} ${action.color} flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
+                                            <span className="material-icons text-lg">{action.icon}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 block">{action.label}</span>
+                                            <span className="text-[10px] text-slate-400 font-medium">Lanzar ahora</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

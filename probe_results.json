@@ -1,0 +1,27 @@
+{
+  "sqp": [
+    "id",
+    "project_id",
+    "unit_id",
+    "installment_number",
+    "amount",
+    "reference",
+    "payment_date",
+    "created_at",
+    "unit_payment_id"
+  ],
+  "sqp_error": null,
+  "up": [
+    "id",
+    "unit_id",
+    "payment_date",
+    "amount_bs",
+    "amount_usd",
+    "bcv_rate",
+    "reference",
+    "created_at",
+    "status",
+    "payment_method"
+  ],
+  "up_error": null
+}

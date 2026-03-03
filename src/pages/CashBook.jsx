@@ -405,127 +405,194 @@ const CashBook = () => {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            {/* Page Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <span className="material-icons text-primary">account_balance_wallet</span>
+        <div className="p-4 sm:p-8 max-w-[1600px] mx-auto min-h-screen bg-[#f8fafc] dark:bg-[#020617] animate-in fade-in duration-700">
+            {/* Page Header - Social VIVO Style */}
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20">
+                        <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">Finanzas En Vivo</span>
                     </div>
-                    <div>
-                        <h1 className="text-2xl font-black text-slate-900 dark:text-white">Libro de Caja / Banco</h1>
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Mayor Auxiliar de Movimientos</p>
+                    <h1 className="text-5xl md:text-6xl font-black tracking-tighter text-slate-900 dark:text-white leading-tight">
+                        Libro de <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600">Caja & Banco</span>
+                    </h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium text-lg max-w-2xl">
+                        Gestión premium de movimientos bancarios y efectivo. Control absoluto de la liquidez en tiempo real.
+                    </p>
+                </div>
+
+                {/* Main Action Buttons */}
+                <div className="flex flex-wrap items-center gap-3">
+                    {!hasInitial && (
+                        <button onClick={() => setShowInitialModal(true)}
+                            className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <span className="material-icons text-emerald-500">flag</span>
+                            </div>
+                            <div className="text-left">
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Apertura</p>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Saldo Inicial</p>
+                            </div>
+                        </button>
+                    )}
+                    <button onClick={() => setShowManualModal(true)}
+                        className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
+                        <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <span className="material-icons text-slate-500">add_circle</span>
+                        </div>
+                        <div className="text-left">
+                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Manual</p>
+                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Nuevo Movimiento</p>
+                        </div>
+                    </button>
+                    <button onClick={handleSync} disabled={syncing}
+                        className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all flex items-center gap-3 group disabled:opacity-60">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:rotate-180 transition-transform duration-500">
+                            <span className={`material-icons text-white ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_download'}</span>
+                        </div>
+                        <div className="text-left">
+                            <p className="text-xs font-black text-white/70 uppercase tracking-widest">Automático</p>
+                            <p className="text-sm font-bold text-white uppercase">{syncing ? 'Sincronizando...' : 'Cargar Período'}</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            {/* Filter Bar - Social Card Style */}
+            <div className="mb-10 p-2 rounded-[2rem] bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border border-white dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span className="material-icons text-emerald-500 text-sm">business</span>
+                    <select value={selectedTower} onChange={e => setSelectedTower(e.target.value)}
+                        className="bg-transparent border-none text-sm font-black text-slate-700 dark:text-white focus:ring-0 cursor-pointer">
+                        {activeTowers.map(t => <option key={t.name} value={t.name}>TOW {t.name}</option>)}
+                    </select>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span className="material-icons text-emerald-400 text-sm">calendar_month</span>
+                    <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
+                        className="bg-transparent border-none text-sm font-black text-slate-700 dark:text-white focus:ring-0 cursor-pointer uppercase tracking-wider">
+                        {MONTHS.map((m, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+                    </select>
+                </div>
+                <div className="flex items-center gap-2 px-4 py-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span className="material-icons text-teal-500 text-sm">event</span>
+                    <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}
+                        className="bg-transparent border-none text-sm font-black text-slate-700 dark:text-white focus:ring-0 cursor-pointer">
+                        {years.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                </div>
+
+                <div className="ml-auto flex items-center gap-3 px-4">
+                    <div className="hidden md:flex flex-col items-end">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado de Caja</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-slate-700 dark:text-white">ACTIVO</span>
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3 mb-6">
-                <select value={selectedTower} onChange={e => setSelectedTower(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    {activeTowers.map(t => <option key={t.name} value={t.name}>Torre {t.name}</option>)}
-                </select>
-                <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    {MONTHS.map((m, i) => <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
-                </select>
-                <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)}
-                    className="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30">
-                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
-
-                <div className="flex-1" />
-
-                {/* Action Buttons */}
-                {!hasInitial && (
-                    <button onClick={() => setShowInitialModal(true)}
-                        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold flex items-center gap-2 transition-all">
-                        <span className="material-icons text-sm">flag</span> Saldo Inicial
-                    </button>
-                )}
-                <button onClick={() => setShowManualModal(true)}
-                    className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-sm font-bold flex items-center gap-2 transition-all">
-                    <span className="material-icons text-sm">add</span> Agregar Manual
-                </button>
-                <button onClick={handleSync} disabled={syncing}
-                    className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-bold flex items-center gap-2 transition-all disabled:opacity-60">
-                    <span className={`material-icons text-sm ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_download'}</span>
-                    {syncing ? 'Sincronizando...' : 'Cargar desde Período'}
-                </button>
-            </div>
-
             {successMsg && (
-                <div className={`mb-4 px-4 py-3 rounded-lg text-sm font-bold ${successMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : successMsg.startsWith('ℹ️') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                <div className={`mb-8 px-6 py-4 rounded-2xl text-sm font-black flex items-center gap-3 animate-in slide-in-from-top-4 duration-500 shadow-xl ${successMsg.startsWith('✅') ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                    successMsg.startsWith('ℹ️') ? 'bg-indigo-500 text-white shadow-indigo-500/20' :
+                        'bg-pink-500 text-white shadow-pink-500/20'}`}>
+                    <span className="material-icons">info</span>
                     {successMsg}
                 </div>
             )}
 
             {/* Banner: Arrastre de Saldo disponible */}
             {prevMonthBalance && !hasInitial && (
-                <div className="mb-5 flex items-center gap-4 px-5 py-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
-                    <span className="material-icons text-blue-500 text-2xl">arrow_forward</span>
-                    <div className="flex-1">
-                        <p className="text-sm font-black text-blue-800 dark:text-blue-300">
-                            El saldo final de <span className="underline">{prevMonthBalance.monthLabel}</span> es <span className="font-black">{formatBs(prevMonthBalance.amount)}</span>
-                        </p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">¿Deseas usarlo como Saldo Inicial de este mes?</p>
+                <div className="mb-10 p-6 rounded-[2rem] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl shadow-emerald-500/20 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
+                    <div className="w-16 h-16 rounded-[2rem] bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
+                        <span className="material-icons text-3xl">transit_enterexit</span>
                     </div>
-                    <button
-                        onClick={handleCarryForward}
-                        disabled={carryingForward}
-                        className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-black flex items-center gap-2 transition-all disabled:opacity-60 whitespace-nowrap"
-                    >
-                        <span className="material-icons text-sm">{carryingForward ? 'sync' : 'done'}</span>
-                        {carryingForward ? 'Aplicando...' : 'Arrastrar Saldo'}
-                    </button>
-                    <button onClick={() => setPrevMonthBalance(null)} className="text-blue-400 hover:text-blue-600 p-1">
-                        <span className="material-icons text-sm">close</span>
-                    </button>
+                    <div className="flex-1 text-center md:text-left">
+                        <h4 className="text-xl font-black tracking-tight mb-1">Arrastre de Saldo Pendiente</h4>
+                        <p className="text-white/80 font-medium">
+                            Se detectó un saldo final de <span className="text-white font-black underline decoration-emerald-400 underline-offset-4">{formatBs(prevMonthBalance.amount)}</span> en {prevMonthBalance.monthLabel}.
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button onClick={handleCarryForward} disabled={carryingForward}
+                            className="px-8 py-3 rounded-2xl bg-white text-emerald-600 font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95">
+                            {carryingForward ? <span className="material-icons animate-spin">sync</span> : <span className="material-icons">download</span>}
+                            Sincronizar {formatBs(prevMonthBalance.amount)}
+                        </button>
+                        <button onClick={() => setPrevMonthBalance(null)} className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 transition-all">
+                            <span className="material-icons">close</span>
+                        </button>
+                    </div>
                 </div>
             )}
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
-                    <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">Total Entradas</p>
-                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300">{formatBs(totalEntradas)}</p>
-                </div>
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
-                    <p className="text-xs font-black text-red-500 dark:text-red-400 uppercase tracking-widest mb-1">Total Salidas</p>
-                    <p className="text-2xl font-black text-red-600 dark:text-red-400">{formatBs(totalSalidas)}</p>
-                </div>
-                <div className={`${saldoFinal >= 0 ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'} border rounded-xl p-4`}>
-                    <p className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1">Saldo Final</p>
-                    <p className={`text-2xl font-black ${saldoFinal >= 0 ? 'text-slate-800 dark:text-white' : 'text-amber-600 dark:text-amber-400'}`}>{formatBs(saldoFinal)}</p>
-                </div>
+            {/* Summary Cards - Glass Layout */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                {[
+                    { label: 'Ingresos Totales', val: totalEntradas, color: 'from-emerald-400 to-emerald-600', icon: 'trending_up', bg: 'emerald' },
+                    { label: 'Egresos Totales', val: totalSalidas, color: 'from-teal-500 to-emerald-600', icon: 'trending_down', bg: 'teal' },
+                    { label: 'Remanente de Caja', val: saldoFinal, color: 'from-emerald-600 to-teal-800', icon: 'account_balance_wallet', bg: 'emerald' }
+                ].map((stat, i) => (
+                    <div key={i} className="group relative p-8 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none hover:-translate-y-1 transition-all duration-500 overflow-hidden">
+                        <div className={`absolute top-0 right-0 w-32 h-32 bg-${stat.bg}-500/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700`}></div>
+                        <div className="flex items-start justify-between mb-4">
+                            <div className={`w-14 h-14 rounded-2xl bg-${stat.bg}-500/10 flex items-center justify-center`}>
+                                <span className={`material-icons bg-gradient-to-br ${stat.color} bg-clip-text text-transparent text-3xl`}>{stat.icon}</span>
+                            </div>
+                            <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest">{stat.label}</span>
+                        </div>
+                        <div className="relative">
+                            <h3 className="text-4xl font-black tracking-tighter text-slate-900 dark:text-white mb-1">
+                                {formatBs(stat.val)}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-1.5 h-1.5 rounded-full bg-${stat.bg}-500 animate-pulse`}></div>
+                                <span className="text-xs font-bold text-slate-400">Actualizado ahora</span>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            {/* Main Table */}
-            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+            {/* Main Table Content - Social Board Style */}
+            <div className="relative rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden min-h-[400px]">
                 {loading ? (
-                    <div className="flex items-center justify-center py-20 text-slate-400">
-                        <span className="material-icons animate-spin text-4xl mr-3">sync</span>
-                        <span className="font-bold">Cargando...</span>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-50">
+                        <div className="w-20 h-20 rounded-[2rem] bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center animate-bounce shadow-xl shadow-emerald-500/20">
+                            <span className="material-icons text-white text-4xl animate-spin">sync</span>
+                        </div>
+                        <p className="mt-6 text-xl font-black tracking-tighter text-slate-900 dark:text-white">Actualizando Registros...</p>
+                        <p className="text-slate-500 font-medium">Un momento por favor</p>
                     </div>
                 ) : enrichedEntries.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                        <span className="material-icons text-5xl mb-3 opacity-30">account_balance_wallet</span>
-                        <p className="font-bold text-base">Sin movimientos para este período</p>
-                        <p className="text-sm mt-1">Usa "Cargar desde Período" o agrega una transacción manualmente.</p>
+                    <div className="flex flex-col items-center justify-center py-32 text-center h-full px-6">
+                        <div className="w-24 h-24 rounded-[2.5rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-8 border-2 border-dashed border-slate-200 dark:border-slate-700">
+                            <span className="material-icons text-5xl text-slate-300 dark:text-slate-600">account_balance_wallet</span>
+                        </div>
+                        <h3 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white mb-2">No se encontraron movimientos</h3>
+                        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-10 leading-relaxed font-medium">
+                            Este libro de caja está listo para ser cargado. Seleccione un período o agregue transacciones manualmente para comenzar a gestionar el flujo.
+                        </p>
+                        <div className="flex items-center gap-4">
+                            <button onClick={handleSync} className="px-8 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                                CARGAR DESDE {MONTHS_UPPER[parseInt(selectedMonth) - 1]}
+                            </button>
+                        </div>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                    <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
+                        <table className="w-full">
                             <thead>
-                                <tr className="bg-slate-800 text-white text-[10px] uppercase font-black tracking-widest">
-                                    <th className="px-4 py-3 text-left w-10">#</th>
-                                    <th className="px-4 py-3 text-left">Fecha</th>
-                                    <th className="px-4 py-3 text-left">Concepto</th>
-                                    <th className="px-4 py-3 text-center">Fuente</th>
-                                    <th className="px-4 py-3 text-right text-emerald-400">Entrada (Bs)</th>
-                                    <th className="px-4 py-3 text-right text-red-400">Salida (Bs)</th>
-                                    <th className="px-4 py-3 text-right">Saldo (Bs)</th>
-                                    <th className="px-2 py-3 text-center w-10"></th>
+                                <tr className="bg-slate-50 dark:bg-slate-800/90 backdrop-blur-xl sticky top-0 z-20 border-b border-slate-100 dark:border-slate-800 shadow-sm">
+                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] w-16">ID</th>
+                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Fecha</th>
+                                    <th className="px-8 py-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Origen & Concepto</th>
+                                    <th className="px-8 py-6 text-right text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em]">Entradas (+)</th>
+                                    <th className="px-8 py-6 text-right text-[10px] font-black text-pink-500 uppercase tracking-[0.3em]">Salidas (-)</th>
+                                    <th className="px-8 py-6 text-right text-[10px] font-black text-indigo-500 uppercase tracking-[0.3em]">Balance</th>
+                                    <th className="px-8 py-6 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] w-20">Acc.</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -533,127 +600,229 @@ const CashBook = () => {
                                     const src = sourceIcon(e.source);
                                     const isInitial = e.tipo === 'SALDO_INICIAL';
                                     return (
-                                        <tr key={e.id} className={`transition-colors group ${isInitial ? 'bg-blue-50/60 dark:bg-blue-900/10' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-                                            <td className="px-4 py-3 text-slate-400 font-bold text-center">{isInitial ? '—' : idx}</td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap">
-                                                {new Date(e.entry_date + 'T12:00:00').toLocaleDateString('es-VE')}
+                                        <tr key={e.id} className={`group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-all duration-300 ${isInitial ? 'bg-emerald-50/20 dark:bg-emerald-900/5' : ''}`}>
+                                            <td className="px-8 py-6 text-xs font-black text-slate-300 dark:text-slate-600 tracking-widest">{isInitial ? '—' : String(idx + 1).padStart(2, '0')}</td>
+                                            <td className="px-8 py-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                                        {new Date(e.entry_date + 'T12:00:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' }).toUpperCase()}
+                                                    </span>
+                                                    <span className="text-[10px] font-medium text-slate-400">{new Date(e.entry_date + 'T12:00:00').getFullYear()}</span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-800 dark:text-slate-200 font-medium max-w-xs">
-                                                <div>{e.concept}</div>
-                                                {e.notes && <div className="text-xs text-slate-400 mt-0.5 italic">{e.notes}</div>}
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-start gap-4">
+                                                    <div className={`w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform ${src.color}`}>
+                                                        <span className="material-icons text-xl">{src.icon}</span>
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-1 leading-tight">{e.concept}</span>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest ${src.color}/70`}>{src.label}</span>
+                                                            {e.notes && (
+                                                                <>
+                                                                    <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                                                                    <span className="text-[10px] font-medium text-slate-400 italic line-clamp-1">{e.notes}</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase ${src.color}`}>
-                                                    <span className="material-icons text-sm">{src.icon}</span>
-                                                    <span className="hidden sm:inline">{src.label}</span>
+                                            <td className="px-8 py-6 text-right">
+                                                <span className={`text-base font-black tracking-tight ${isInitial ? 'text-emerald-700 dark:text-emerald-300' : e._entrada !== null ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                                                    {isInitial ? formatBs(e.amount_bs) : e._entrada !== null ? `+${formatBs(e._entrada).replace('Bs ', '')}` : '—'}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                                                {isInitial ? <span className="text-blue-600 dark:text-blue-400">{formatBs(e.amount_bs)}</span> : e._entrada !== null ? formatBs(e._entrada) : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                                            <td className="px-8 py-6 text-right">
+                                                <span className={`text-base font-black tracking-tight ${!isInitial && e._salida !== null ? 'text-rose-500 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                                                    {!isInitial && e._salida !== null ? `-${formatBs(e._salida).replace('Bs ', '')}` : '—'}
+                                                </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right font-black text-red-500 dark:text-red-400 whitespace-nowrap">
-                                                {!isInitial && e._salida !== null ? formatBs(e._salida) : <span className="text-slate-300 dark:text-slate-700">—</span>}
+                                            <td className="px-8 py-6 text-right">
+                                                <div className="flex flex-col items-end">
+                                                    <span className={`text-lg font-black tracking-tighter ${e._saldo >= 0 ? 'text-slate-900 dark:text-white' : 'text-pink-600'}`}>
+                                                        {formatBs(e._saldo)}
+                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className={`w-1 h-1 rounded-full ${e._saldo >= 0 ? 'bg-emerald-500' : 'bg-pink-500'}`}></div>
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Real-Time</span>
+                                                    </div>
+                                                </div>
                                             </td>
-                                            <td className={`px-4 py-3 text-right font-black whitespace-nowrap text-base ${e._saldo >= 0 ? 'text-slate-800 dark:text-white' : 'text-amber-600 dark:text-amber-400'}`}>
-                                                {formatBs(e._saldo)}
-                                            </td>
-                                            <td className="px-2 py-3 text-center">
-                                                {(e.source === 'manual' || e.source === 'saldo_inicial') && (
-                                                    <button onClick={() => handleDelete(e.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-all p-1 rounded">
-                                                        <span className="material-icons text-sm">delete</span>
-                                                    </button>
-                                                )}
+                                            <td className="px-8 py-6 text-center">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {(e.source === 'manual' || e.source === 'saldo_inicial') ? (
+                                                        <button onClick={() => handleDelete(e.id)}
+                                                            className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-500 hover:bg-pink-500 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <span className="material-icons text-sm">delete_outline</span>
+                                                        </button>
+                                                    ) : (
+                                                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 flex items-center justify-center">
+                                                            <span className="material-icons text-sm">lock</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
                                 })}
                             </tbody>
-                            <tfoot>
-                                <tr className="bg-slate-100 dark:bg-slate-800 border-t-2 border-slate-200 dark:border-slate-700 font-black text-sm">
-                                    <td colSpan={4} className="px-4 py-4 text-right text-slate-600 dark:text-slate-300 uppercase tracking-wide text-xs">Totales del Período</td>
-                                    <td className="px-4 py-4 text-right text-emerald-600 dark:text-emerald-400">{formatBs(totalEntradas)}</td>
-                                    <td className="px-4 py-4 text-right text-red-500 dark:text-red-400">{formatBs(totalSalidas)}</td>
-                                    <td className={`px-4 py-4 text-right text-lg ${saldoFinal >= 0 ? 'text-slate-900 dark:text-white' : 'text-amber-600'}`}>{formatBs(saldoFinal)}</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
                         </table>
+                    </div>
+                )}
+
+                {/* Sticky Footer: Totales Estética Social VIVO */}
+                {!loading && enrichedEntries.length > 0 && (
+                    <div className="sticky bottom-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 p-8 grid grid-cols-1 md:grid-cols-4 items-center gap-8 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <span className="material-icons text-white">analytics</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Reporte Detallado</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Cierre {MONTHS[parseInt(selectedMonth) - 1]}</p>
+                            </div>
+                        </div>
+
+                        <div className="text-right border-r border-slate-100 dark:border-slate-800 md:pr-8 last:border-0">
+                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em] mb-1">Ahorro / Entradas</p>
+                            <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{formatBs(totalEntradas)}</span>
+                        </div>
+
+                        <div className="text-right border-r border-slate-100 dark:border-slate-800 md:pr-8 last:border-0">
+                            <p className="text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-1">Gastos / Salidas</p>
+                            <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{formatBs(totalSalidas)}</span>
+                        </div>
+
+                        <div className="text-right">
+                            <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${saldoFinal >= 0 ? 'text-emerald-500' : 'text-rose-500 animate-pulse'}`}>Saldo Final Consolidado</p>
+                            <span className={`text-4xl font-black tracking-tighter ${saldoFinal >= 0 ? 'text-slate-900 dark:text-white' : 'text-rose-600'}`}>{formatBs(saldoFinal)}</span>
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Modal: Saldo Inicial */}
+            {/* Modal: Saldo Inicial - Social VIVO Style */}
             {showInitialModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Establecer Saldo Inicial</h3>
-                        <p className="text-sm text-slate-500 mb-5">Este es el monto que hay en la cuenta al inicio del período. Solo se ingresa una vez.</p>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Fecha del Saldo Inicial</label>
-                                <input type="date" value={initialBalanceForm.date} onChange={e => setInitialBalanceForm(p => ({ ...p, date: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm" />
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowInitialModal(false)}></div>
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-md p-10 relative overflow-hidden border border-white dark:border-slate-800 animate-in zoom-in-95 duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -translate-y-12 translate-x-12 blur-2xl"></div>
+
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                <span className="material-icons text-emerald-500 text-3xl">flag</span>
                             </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Monto (Bs)</label>
-                                <input type="number" min="0" step="0.01" value={initialBalanceForm.amount} onChange={e => setInitialBalanceForm(p => ({ ...p, amount: e.target.value }))}
-                                    placeholder="0.00" className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm font-bold" />
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Saldo Inicial</h3>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Apertura de Período</p>
                             </div>
                         </div>
-                        <div className="flex gap-3 mt-6">
-                            <button onClick={() => setShowInitialModal(false)} className="flex-1 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
-                            <button onClick={handleSaveInitialBalance} disabled={saving} className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm disabled:opacity-60">
-                                {saving ? 'Guardando...' : 'Guardar'}
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha de Apertura</label>
+                                <div className="relative">
+                                    <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">calendar_today</span>
+                                    <input type="date" value={initialBalanceForm.date} onChange={e => setInitialBalanceForm(p => ({ ...p, date: e.target.value }))}
+                                        className="w-full pl-11 pr-4 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-sm font-bold focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Monto Disponible (Bs)</label>
+                                <div className="relative">
+                                    <span className="material-icons absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm">account_balance_wallet</span>
+                                    <input type="number" min="0" step="0.01" value={initialBalanceForm.amount} onChange={e => setInitialBalanceForm(p => ({ ...p, amount: e.target.value }))}
+                                        placeholder="0.00" className="w-full pl-11 pr-4 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-xl font-black focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-4 mt-10">
+                            <button onClick={() => setShowInitialModal(false)}
+                                className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
+                                Cancelar
+                            </button>
+                            <button onClick={handleSaveInitialBalance} disabled={saving || !initialBalanceForm.amount}
+                                className="flex-[1.5] py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-lg shadow-emerald-500/25 transition-all active:scale-95 disabled:opacity-50">
+                                {saving ? 'GUARDANDO...' : 'CONFIRMAR APERTURA'}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal: Transacción Manual */}
+            {/* Modal: Transacción Manual - Social VIVO Style */}
             {showManualModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-md p-6">
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-1">Agregar Transacción Manual</h3>
-                        <p className="text-sm text-slate-500 mb-5">Para pagos o ingresos no registrados en el sistema.</p>
-                        <div className="space-y-4">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={() => setShowManualModal(false)}></div>
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl w-full max-w-md p-10 relative overflow-hidden border border-white dark:border-slate-800 animate-in zoom-in-95 duration-300">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -translate-y-12 translate-x-12 blur-2xl"></div>
+
+                        <div className="flex items-center gap-4 mb-8">
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                                <span className="material-icons text-emerald-500 text-3xl">add_circle</span>
+                            </div>
                             <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Tipo</label>
-                                <div className="flex gap-2">
-                                    {[{ v: 'MANUAL_ENTRADA', label: 'Entrada', color: 'bg-emerald-500' }, { v: 'MANUAL_SALIDA', label: 'Salida', color: 'bg-red-500' }].map(opt => (
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Nuevo Movimiento</h3>
+                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Registro Manual</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Tipo de Operación</label>
+                                <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl gap-1">
+                                    {[
+                                        { v: 'MANUAL_ENTRADA', label: 'Ingreso', icon: 'arrow_upward', color: 'bg-emerald-500' },
+                                        { v: 'MANUAL_SALIDA', label: 'Egreso', icon: 'arrow_downward', color: 'bg-rose-500' }
+                                    ].map(opt => (
                                         <button key={opt.v} onClick={() => setManualForm(p => ({ ...p, tipo: opt.v }))}
-                                            className={`flex-1 py-2 rounded-lg text-sm font-black transition-all ${manualForm.tipo === opt.v ? `${opt.color} text-white` : 'border border-slate-200 dark:border-slate-700 text-slate-500'}`}>
-                                            {opt.label}
+                                            className={`flex-1 py-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${manualForm.tipo === opt.v ? `${opt.color} text-white shadow-lg` : 'text-slate-500 hover:bg-white dark:hover:bg-slate-700'
+                                                }`}>
+                                            <span className="material-icons text-[14px]">{opt.icon}</span>
+                                            {opt.label.toUpperCase()}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Fecha</label>
-                                <input type="date" value={manualForm.date} onChange={e => setManualForm(p => ({ ...p, date: e.target.value }))}
-                                    className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm" />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Fecha</label>
+                                    <input type="date" value={manualForm.date} onChange={e => setManualForm(p => ({ ...p, date: e.target.value }))}
+                                        className="w-full px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-xs font-bold focus:ring-2 focus:ring-violet-500/20 transition-all outline-none" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Monto (Bs)</label>
+                                    <input type="number" min="0" step="0.01" value={manualForm.amount} onChange={e => setManualForm(p => ({ ...p, amount: e.target.value }))}
+                                        placeholder="0.00" className="w-full px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-sm font-black focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none" />
+                                </div>
                             </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Concepto</label>
+
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Concepto / Descripción</label>
                                 <input type="text" value={manualForm.concept} onChange={e => setManualForm(p => ({ ...p, concept: e.target.value }))}
-                                    placeholder="Ej: Pago de plomería" className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm" />
+                                    placeholder="Ej: Mantenimiento de Ascensores" className="w-full px-4 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-sm font-bold focus:ring-2 focus:ring-violet-500/20 transition-all outline-none" />
                             </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Monto (Bs)</label>
-                                <input type="number" min="0" step="0.01" value={manualForm.amount} onChange={e => setManualForm(p => ({ ...p, amount: e.target.value }))}
-                                    placeholder="0.00" className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm font-bold" />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-black text-slate-500 uppercase mb-1">Notas (opcional)</label>
-                                <input type="text" value={manualForm.notes} onChange={e => setManualForm(p => ({ ...p, notes: e.target.value }))}
-                                    placeholder="Referencia u observaciones..." className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-white text-sm" />
+
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Observaciones (Opcional)</label>
+                                <textarea value={manualForm.notes} onChange={e => setManualForm(p => ({ ...p, notes: e.target.value }))}
+                                    placeholder="Detalles adicionales o referencias..." rows="2"
+                                    className="w-full px-4 py-4 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 text-slate-800 dark:text-white text-sm font-medium focus:ring-2 focus:ring-violet-500/20 transition-all outline-none resize-none" />
                             </div>
                         </div>
-                        <div className="flex gap-3 mt-6">
-                            <button onClick={() => setShowManualModal(false)} className="flex-1 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800">Cancelar</button>
+
+                        <div className="flex gap-4 mt-8">
+                            <button onClick={() => setShowManualModal(false)}
+                                className="flex-1 py-4 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
+                                Cancelar
+                            </button>
                             <button onClick={handleSaveManual} disabled={saving || !manualForm.concept || !manualForm.amount}
-                                className="flex-1 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-bold text-sm disabled:opacity-60">
-                                {saving ? 'Guardando...' : 'Guardar'}
+                                className="flex-[1.5] py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-violet-600 shadow-lg shadow-violet-500/20 hover:shadow-violet-500/40 text-white font-black text-sm active:scale-95 transition-all disabled:opacity-50">
+                                {saving ? 'GUARDANDO...' : 'REGISTRAR OPERACIÓN'}
                             </button>
                         </div>
                     </div>

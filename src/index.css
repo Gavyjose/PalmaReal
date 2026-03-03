@@ -3,17 +3,24 @@
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-display: "Manrope", sans-serif;
+  --font-display: "Montserrat", sans-serif;
   --font-sans: "Inter", sans-serif;
 
-  --color-primary: #0f172a;
+  --color-primary: #059669;
+  /* Jade Emerald */
   --color-primary-foreground: #ffffff;
+
+  --color-secondary: #0d9488;
+  /* Teal */
+  --color-accent: #0f766e;
+  /* Dark Teal */
 
   --color-background-light: #f8fafc;
   --color-background-dark: #0f172a;
 
-  --radius-lg: 0px;
-  --radius-xl: 0px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
 }
 
 :root {
@@ -49,6 +56,28 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+  }
+
+  .social-card {
+    @apply bg-white dark:bg-slate-800 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1;
+  }
+
+  .font-display-bold {
+    font-family: var(--font-display);
+    font-weight: 850;
+    letter-spacing: -0.04em;
+  }
+
+  .avatar-ring {
+    @apply ring-4 ring-white dark:ring-slate-800 shadow-xl;
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700;
+  }
+
+  .emerald-gradient {
+    @apply bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20;
   }
 }
 
