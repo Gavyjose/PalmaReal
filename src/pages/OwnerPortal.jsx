@@ -198,14 +198,14 @@ const OwnerPortal = () => {
                         Torre {unit?.tower} <span className="opacity-30">·</span> Apartamento {unit?.number}
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <div className="px-6 py-3 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-2xl shadow-xl flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <div className="flex items-center gap-3">
+                    <div className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
                              <span className="material-icons">query_stats</span>
                         </div>
                         <div>
-                             <span className="text-micro text-slate-400 block">Tasa BCV</span>
-                             <span className="text-sm font-display-black text-slate-900 dark:text-white">
+                             <span className="text-xs text-slate-500 block">Tasa BCV</span>
+                             <span className="text-sm font-mono font-bold text-slate-900 dark:text-white">
                                 Bs. {todayRate > 0 ? formatNumber(todayRate) : '---'}
                              </span>
                         </div>
@@ -214,22 +214,22 @@ const OwnerPortal = () => {
             </header>
 
             {!unit && (
-                <div className="mb-12 p-8 bg-amber-500/10 border border-amber-500/20 rounded-[2.5rem] flex items-center gap-6 animate-in slide-in-from-top-4 duration-500">
-                    <div className="w-16 h-16 bg-amber-500 text-white rounded-[1.5rem] flex items-center justify-center shadow-xl shadow-amber-500/20">
-                        <span className="material-icons text-3xl">terminal</span>
+                <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-center gap-4">
+                    <div className="w-10 h-10 bg-amber-500 text-white rounded flex items-center justify-center">
+                        <span className="material-icons">terminal</span>
                     </div>
                     <div>
-                        <h4 className="text-sm font-display-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Modo Simulación Activo</h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 font-display-medium mt-1 leading-relaxed">
-                            No se detectó un apartamento vinculado a este perfil. Está visualizando datos de **demostración técnica** generados por el centro de mando.
+                        <h4 className="text-sm font-bold text-amber-600 uppercase">Modo Simulación Activo</h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                            No se detectó un apartamento vinculado a este perfil. Está visualizando datos de demostración.
                         </p>
                     </div>
                 </div>
             )}
 
-            <div className="grid grid-cols-12 gap-8 lg:gap-12">
+            <div className="grid grid-cols-12 gap-4 lg:gap-6">
                 {/* Dashboard Principal */}
-                <div className="col-span-12 xl:col-span-8 space-y-12">
+                <div className="col-span-12 xl:col-span-8 space-y-6">
                     
                     <OwnerOverviewCard 
                         debt={debt} 
@@ -237,14 +237,14 @@ const OwnerPortal = () => {
                         onOpenPaymentModal={() => setIsPaymentModalOpen(true)} 
                     />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <DebtEvolutionChart debt={debt} />
                         <OwnerAnnouncements announcements={announcements} />
                     </div>
 
-                    <div className="space-y-6">
-                        <h3 className="text-sm font-display-black text-slate-900 dark:text-white uppercase tracking-[0.2em] flex items-center gap-3">
-                             <span className="w-8 h-1 bg-emerald-500 rounded-full"></span>
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase flex items-center gap-2">
+                             <span className="w-6 h-0.5 bg-slate-900 dark:bg-white"></span>
                              Iniciativas de Capital
                         </h3>
                         <SpecialProjectsFeed projects={projects} />
@@ -258,20 +258,19 @@ const OwnerPortal = () => {
                 </div>
 
                 {/* Right Column: Bank Info only */}
-                <div className="col-span-12 xl:col-span-4 space-y-8">
+                <div className="col-span-12 xl:col-span-4 space-y-4">
                     {/* Bank Info Section (Consolidated) */}
-                    <div className="group">
-                        <div className="bg-gradient-to-br from-white/40 to-white/10 dark:from-slate-800/40 dark:to-slate-900/10 backdrop-blur-3xl border border-white/20 dark:border-white/5 rounded-[3rem] p-10 shadow-2xl transition-all hover:shadow-emerald-500/5">
-                            <div className="flex flex-col gap-6">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <div className="w-14 h-14 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                                        <span className="material-icons text-2xl">account_balance_wallet</span>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-display-black text-slate-900 dark:text-white uppercase tracking-tight">Cuentas Receptoras</h3>
-                                        <p className="text-[10px] text-slate-400 font-display-bold uppercase tracking-widest">Tesorería Palma Real</p>
-                                    </div>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-4">
+                        <div className="flex flex-col gap-4">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <span className="material-icons text-xl">account_balance_wallet</span>
                                 </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900 dark:text-white">Cuentas Receptoras</h3>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase">Tesorería Palma Real</p>
+                                </div>
+                            </div>
                                 
                                 <div className="space-y-4">
                                     <div className="space-y-1">

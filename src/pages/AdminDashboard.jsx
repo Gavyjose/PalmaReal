@@ -17,15 +17,10 @@ const monthMap = {
 };
 
 const fetchDashboardData = async ([_, tower]) => {
-    // 1. Fetch units
-    const { data: units } = await supabase
-        .from('units')
-        .select('*, owners(full_name)')
-        .eq(tower && tower !== 'Todas las Torres' ? 'tower' : 'id', tower && tower !== 'Todas las Torres' ? tower : 'any');
-
-    // Fallback if the query above is too complex for JS logic, better fetch all if "Todas", else specific tower
     const query = supabase.from('units').select('*, owners(full_name)');
-    if (tower && tower !== 'Todas las Torres') query.eq('tower', tower);
+    if (tower && tower !== 'Todas las Torres') {
+        query.eq('tower', tower);
+    }
     const { data: finalUnits } = await query;
 
     // 2. Fetch all periods with consolidated columns
@@ -229,7 +224,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Selectors Bar: Social Card Style */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center bg-white/70 dark:bg-slate-900/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-white dark:border-slate-800 shadow-2xl shadow-slate-200/40 dark:shadow-none">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800">
                 <div className="lg:col-span-3 space-y-2">
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Seleccionar Torre</label>
                     <div className="relative group">
@@ -241,7 +236,7 @@ const AdminDashboard = () => {
                                 setLastSelectedTower(e.target.value);
                                 setSelectedUnitId(null);
                             }}
-                            className="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-bold text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all appearance-none cursor-pointer"
+                            className="w-full pl-10 pr-4 py-3 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-sm text-slate-900 dark:text-white focus:ring-1 focus:ring-slate-900 outline-none transition-colors appearance-none cursor-pointer"
                         >
                             <option value="Todas las Torres">Todas las Torres</option>
                             {activeTowers.map(t => <option key={t.id} value={t.name}>Torre {t.name}</option>)}
@@ -250,7 +245,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                <div className={`lg:col-span-5 transition-all duration-500 ${viewMode === 'individual' ? 'opacity-100 scale-100' : 'opacity-30 pointer-events-none scale-95 blur-[2px]'}`}>
+                <div className={`lg:col-span-5 transition-opacity ${viewMode === 'individual' ? 'opacity-100' : 'opacity-30 pointer-events-none'}`}>
                     <div className="space-y-2">
                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Buscar Apartamento</label>
                         <div className="relative group">
@@ -260,7 +255,7 @@ const AdminDashboard = () => {
                                 placeholder="Escribe el nro de apto o nombre..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-11 pr-12 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 font-bold text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all"
+                                className="w-full pl-10 pr-10 py-3 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-sm text-slate-900 dark:text-white focus:ring-1 focus:ring-slate-900 outline-none transition-colors"
                             />
                             {selectedUnitId && (
                                 <button
@@ -312,131 +307,120 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* KPI Cards: Social VIVO Gradient Style */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* KPI Cards: Financial Ledger Style */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {viewMode === 'general' ? (
                     <>
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                                    <span className="material-icons text-3xl">account_balance_wallet</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <span className="material-icons text-xl">account_balance_wallet</span>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Recaudado</p>
-                                    <p className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter">Entrada de Capital</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Recaudado</p>
+                                    <p className="text-[10px] font-bold text-emerald-600 uppercase">Entrada de Capital</p>
                                 </div>
                             </div>
-                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">$ {formatNumber(metrics?.totalCollected || 0)}</h3>
-                            <div className="mt-4 flex items-center gap-2">
-                                <div className="flex -space-x-2">
-                                    {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-900 bg-emerald-100 flex items-center justify-center"><span className="material-icons text-[10px] text-emerald-500">check</span></div>)}
-                                </div>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Liquidado</span>
+                            <h3 className="text-2xl font-mono font-bold text-slate-900 dark:text-white">$ {formatNumber(metrics?.totalCollected || 0)}</h3>
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Liquidado</span>
                             </div>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                                    <span className="material-icons text-3xl">hourglass_empty</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-amber-50 flex items-center justify-center text-amber-600">
+                                    <span className="material-icons text-xl">hourglass_empty</span>
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pendiente</p>
                                     <p className="text-[10px] font-black text-amber-500 uppercase tracking-tighter">Cuentas por Cobrar</p>
                                 </div>
                             </div>
-                            <h3 className="text-4xl font-black text-amber-600 dark:text-amber-500 tracking-tighter">$ {formatNumber(metrics?.totalDebt || 0)}</h3>
-                            <div className="mt-4 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 text-[9px] font-black uppercase tracking-widest">En Gestión</span>
+                            <h3 className="text-2xl font-mono font-bold text-amber-600 dark:text-amber-500">$ {formatNumber(metrics?.totalDebt || 0)}</h3>
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-sm bg-amber-50 dark:bg-amber-900/20 text-amber-600 text-[9px] font-bold uppercase">En Gestión</span>
                             </div>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600">
-                                    <span className="material-icons text-3xl">trending_up</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
+                                    <span className="material-icons text-xl">trending_up</span>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Salud Financiera</p>
-                                    <p className="text-[10px] font-black text-teal-600 uppercase tracking-tighter">Ratio de Éxito</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Salud Financiera</p>
+                                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Ratio de Éxito</p>
                                 </div>
                             </div>
-                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{(metrics?.recoveryRate || 0).toFixed(1)}%</h3>
-                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full mt-4 overflow-hidden p-0.5">
-                                <div className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-1000" style={{ width: `${metrics?.recoveryRate || 0}%` }}></div>
+                            <h3 className="text-2xl font-mono font-bold text-slate-900 dark:text-white">{(metrics?.recoveryRate || 0).toFixed(1)}%</h3>
+                            <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-sm mt-3">
+                                <div className="bg-slate-900 dark:bg-slate-400 h-full rounded-sm" style={{ width: `${metrics?.recoveryRate || 0}%` }}></div>
                             </div>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center text-white">
-                                    <span className="material-icons text-3xl">apartment</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <span className="material-icons text-xl">apartment</span>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Unidades</p>
-                                    <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">{selectedTower}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Unidades</p>
+                                    <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">{selectedTower}</p>
                                 </div>
                             </div>
-                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">{metrics?.totalUnits || 0}</h3>
-                            <div className="mt-4 flex items-center gap-2">
-                                <span className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[10px] font-black uppercase tracking-widest">Activas</span>
+                            <h3 className="text-2xl font-mono font-bold text-slate-900 dark:text-white">{metrics?.totalUnits || 0}</h3>
+                            <div className="mt-3 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 text-[10px] font-bold uppercase">Activas</span>
                             </div>
                         </div>
                     </>
                 ) : (
                     <>
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-600 dark:bg-emerald-500 flex items-center justify-center text-white">
-                                    <span className="material-icons text-3xl">receipt_long</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <span className="material-icons text-xl">receipt_long</span>
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Exigible</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Saldo Exigible</p>
                             </div>
-                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+                            <h3 className="text-2xl font-mono font-bold text-slate-900 dark:text-white">
                                 {unitMetrics ? `$ ${formatNumber(unitMetrics.history.reduce((s, h) => s + (h.deuda - h.pago), 0))}` : '--'}
                             </h3>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                                    <span className="material-icons text-3xl">payments</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <span className="material-icons text-xl">payments</span>
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Histórico Pagos</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Histórico Pagos</p>
                             </div>
-                            <h3 className="text-4xl font-black text-emerald-600 tracking-tighter">
+                            <h3 className="text-2xl font-mono font-bold text-emerald-600">
                                 {unitMetrics ? `$ ${formatNumber(unitMetrics.history.reduce((s, h) => s + h.pago, 0))}` : '--'}
                             </h3>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600">
-                                    <span className="material-icons text-3xl">verified</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600">
+                                    <span className="material-icons text-xl">verified</span>
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cumplimiento</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cumplimiento</p>
                             </div>
-                            <h3 className="text-4xl font-black text-teal-600 tracking-tighter">
+                            <h3 className="text-2xl font-mono font-bold text-slate-600 dark:text-slate-400">
                                 {unitMetrics ? `${((unitMetrics.history.filter(h => h.pago >= h.deuda - 0.05).length / unitMetrics.history.length) * 100 || 0).toFixed(0)}%` : '--'}
                             </h3>
                         </div>
 
-                        <div className="group relative overflow-hidden bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all hover:-translate-y-2">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl"></div>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                                    <span className="material-icons text-3xl">history</span>
+                        <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500">
+                                    <span className="material-icons text-xl">history</span>
                                 </div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período Inicio</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Período Inicio</p>
                             </div>
-                            <h3 className="text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+                            <h3 className="text-2xl font-mono font-bold text-slate-900 dark:text-white">
                                 {unitMetrics ? (unitMetrics.history.length > 0 ? unitMetrics.history[0].name.split(' ')[1] : '--') : '--'}
                             </h3>
                         </div>
@@ -444,21 +428,18 @@ const AdminDashboard = () => {
                 )}
             </div>
 
-            {/* Charts Section: Social Board Style */}
-            <div className="grid grid-cols-1 gap-10">
-                <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl rounded-[3rem] border border-white dark:border-slate-800 p-10 shadow-3xl shadow-slate-200/50 dark:shadow-none">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-12 gap-6">
+            {/* Charts Section: Financial Ledger Style */}
+            <div className="grid grid-cols-1 gap-4">
+                <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 p-4">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
                         <div className="space-y-1">
-                            <h4 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-                                <div className="w-2 h-8 bg-emerald-600 rounded-full"></div>
+                            <h4 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                <div className="w-1 h-6 bg-slate-900 dark:bg-white rounded-sm"></div>
                                 {viewMode === 'general' ? 'Dinámica Financiera Histórica' : `Análisis: Apartamento ${unitMetrics?.unit?.number}`}
                             </h4>
-                            <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-400 px-5">
-                                <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Recaudado</div>
                                 <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-400"></span> Gastos Reales</div>
                                 <div className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-400"></span> Meta Proyectada</div>
                             </div>
-                        </div>
                         <div className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
                             {['12M', '6M', '3M'].map(t => <button key={t} className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all ${t === '12M' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>{t}</button>)}
                         </div>

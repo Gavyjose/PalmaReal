@@ -319,81 +319,78 @@ const Cobranzas = () => {
     const totalReceivable = collectionTotals.receivable;
 
     return (
-        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8 min-h-screen animate-fade-in">
-            {/* Header Section - Modern Social Card */}
-            <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-emerald-500/20 rounded-[2.5rem] blur-2xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="relative social-card p-8 lg:p-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl rounded-[2.5rem]">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 shadow-inner">
-                                <span className="material-icons text-emerald-600 dark:text-emerald-400">account_balance_wallet</span>
-                            </div>
-                            <div>
-                                <h1 className="text-4xl lg:text-5xl font-display-bold tracking-tight text-slate-900 dark:text-white">
-                                    Libro de <span className="gradient-text bg-gradient-to-r from-emerald-600 to-teal-500">Cobranzas</span>
-                                </h1>
-                                <p className="text-slate-500 dark:text-slate-400 font-medium tracking-wide">Gestión Integral de Cartera Bimonetaria</p>
-                            </div>
+        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 gap-4">
+            {/* Header Section - Financial Ledger Style */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-emerald-50 flex items-center justify-center border border-slate-200">
+                            <span className="material-icons text-emerald-600">account_balance_wallet</span>
                         </div>
-
-                        <div className="flex flex-wrap items-center gap-4">
-                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
-                                <span className="material-icons text-emerald-500 text-sm">calendar_month</span>
-                                <span className="text-xs font-display-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-widest">
-                                    {currentPeriod?.period_name || 'Sin Período'}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-500/10 rounded-2xl border border-teal-100 dark:border-teal-500/20">
-                                <span className="material-icons text-teal-500 text-sm">currency_exchange</span>
-                                <span className="text-xs font-display-bold text-teal-700 dark:text-teal-300">
-                                    TIPO DE CAMBIO: <span className="font-mono text-sm ml-1">{formatCurrency(bcvRate || 0)} Bs/$</span>
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
-                                <span className="material-icons text-slate-400 text-sm">apartment</span>
-                                <span className="text-xs font-display-bold text-slate-600 dark:text-slate-300">
-                                    TORRE: <span className="uppercase ml-1">{selectedTower}</span>
-                                </span>
-                            </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                                Libro de <span className="text-emerald-600">Cobranzas</span>
+                            </h1>
+                            <p className="text-sm text-slate-500">Gestión Integral de Cartera Bimonetaria</p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 no-print">
-                        <button
-                            onClick={() => setShowReport(true)}
-                            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl font-display-bold text-sm shadow-xl shadow-emerald-600/20 hover:scale-105 hover:-translate-y-1 active:scale-95 transition-all duration-300 group/btn"
-                        >
-                            <span className="material-icons text-lg group-hover/btn:rotate-12 transition-transform">description</span>
-                            GENERAR REPORTE
-                        </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-sm border border-emerald-200 dark:border-emerald-800">
+                            <span className="material-icons text-emerald-500 text-sm">calendar_month</span>
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase">
+                                {currentPeriod?.period_name || 'Sin Período'}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700">
+                            <span className="material-icons text-slate-500 text-sm">currency_exchange</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                TIPO DE CAMBIO: <span className="font-mono">{formatCurrency(bcvRate || 0)} Bs/$</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700">
+                            <span className="material-icons text-slate-400 text-sm">apartment</span>
+                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase">
+                                TORRE: {selectedTower}
+                            </span>
+                        </div>
                     </div>
+                </div>
+
+                <div className="flex items-center gap-3 no-print">
+                    <button
+                        onClick={() => setShowReport(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-md font-bold text-sm hover:bg-slate-800 transition-colors"
+                    >
+                        <span className="material-icons text-lg">description</span>
+                        GENERAR REPORTE
+                    </button>
                 </div>
             </div>
 
-            {/* Selectors Tray - Improved Aesthetics */}
-            <div className="social-card p-6 flex flex-wrap gap-6 items-end bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-white/10 dark:border-white/5 rounded-[2.5rem] no-print">
-                <div className="flex-1 min-w-[300px]">
-                    <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Búsqueda Inteligente</label>
-                    <div className="relative group">
-                        <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-xl group-focus-within:text-emerald-500 transition-all">search</span>
+            {/* Selectors Tray - Financial Ledger Style */}
+            <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 items-end no-print">
+                <div className="flex-1 min-w-[250px]">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Búsqueda</label>
+                    <div className="relative">
+                        <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
                         <input
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl py-4 pl-14 pr-6 text-sm focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-medium placeholder:text-slate-400 shadow-sm"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-slate-900 focus:border-slate-900 transition-colors font-medium placeholder:text-slate-400"
                             placeholder="Buscar residente por apartamento o nombre..."
                             type="text"
                         />
                     </div>
                 </div>
 
-                <div className="w-72">
-                    <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Periodo Contable</label>
+                <div className="w-64">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Periodo Contable</label>
                     <div className="relative">
                         <select
                             value={currentPeriod?.id || ''}
                             onChange={(e) => setCurrentPeriod(periods.find(p => p.id === e.target.value))}
-                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl py-4 px-5 text-sm font-display-bold appearance-none cursor-pointer focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md py-2 px-3 text-sm font-bold appearance-none cursor-pointer focus:ring-1 focus:ring-slate-900 transition-colors"
                         >
                             {periods.map(p => <option key={p.id} value={p.id}>{p.period_name}</option>)}
                         </select>
@@ -424,70 +421,59 @@ const Cobranzas = () => {
                     { label: 'Ingresos Divisas', val: `$ ${formatNumber(collectionTotals.usdTotal)}`, sub: 'Recaudación total USD', icon: 'payments', color: 'teal', progress: 85 },
                     { label: 'Cuentas por Cobrar', val: `${collectionTotals.receivable < -0.01 ? '- $' : '$'} ${formatNumber(Math.abs(collectionTotals.receivable))}`, sub: 'Monto total pendiente', icon: 'account_balance', color: 'slate', progress: 30 },
                 ].map((stat, i) => (
-                    <div key={i} className="group relative">
-                        <div className={`absolute -inset-0.5 bg-gradient-to-br ${stat.color === 'emerald' ? 'from-emerald-500/20' : stat.color === 'rose' ? 'from-rose-500/20' : stat.color === 'teal' ? 'from-teal-500/20' : 'from-slate-500/20'} to-transparent rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition duration-500`}></div>
-                        <div className="relative social-card p-6 flex flex-col gap-4 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-[2rem] shadow-xl hover:translate-y-[-4px] transition-all duration-300">
-                            <div className="flex items-start justify-between">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${stat.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-600' : stat.color === 'rose' ? 'bg-rose-500/10 text-rose-600' : stat.color === 'teal' ? 'bg-teal-500/10 text-teal-600' : 'bg-slate-500/10 text-slate-600'} transition-all duration-500 group-hover:scale-110`}>
-                                    <span className="material-icons text-2xl">{stat.icon}</span>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[10px] font-display-bold text-slate-400 uppercase tracking-[0.2em]">{stat.label}</p>
-                                    <p className="text-2xl font-display-bold text-slate-900 dark:text-white mt-1 leading-none">{stat.val}</p>
-                                </div>
+                    <div className="bg-white dark:bg-slate-900 p-4 rounded-md border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-start justify-between mb-3">
+                            <div className={`w-10 h-10 rounded flex items-center justify-center ${stat.color === 'emerald' ? 'bg-emerald-50 text-emerald-600' : stat.color === 'rose' ? 'bg-red-50 text-red-600' : stat.color === 'teal' ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-600'}`}>
+                                <span className="material-icons text-xl">{stat.icon}</span>
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center text-[10px]">
-                                    <span className="text-slate-500 font-medium">{stat.sub}</span>
-                                    <span className={`font-bold ${stat.color === 'emerald' ? 'text-emerald-500' : stat.color === 'rose' ? 'text-rose-500' : 'text-teal-500'}`}>{Math.round(stat.progress)}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                                    <div
-                                        className={`h-full transition-all duration-1000 ease-out rounded-full ${stat.color === 'emerald' ? 'bg-emerald-500' : stat.color === 'rose' ? 'bg-rose-500' : stat.color === 'teal' ? 'bg-teal-500' : 'bg-slate-500'}`}
-                                        style={{ width: `${stat.progress}%` }}
-                                    ></div>
-                                </div>
+                            <div className="text-right">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase">{stat.label}</p>
+                                <p className="text-xl font-mono font-bold text-slate-900 dark:text-white mt-1">{stat.val}</p>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-slate-500">{stat.sub}</span>
+                                <span className={`font-bold ${stat.color === 'emerald' ? 'text-emerald-600' : stat.color === 'rose' ? 'text-red-600' : 'text-slate-600'}`}>{Math.round(stat.progress)}%</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-sm">
+                                <div
+                                    className={`h-full rounded-sm ${stat.color === 'emerald' ? 'bg-emerald-600' : stat.color === 'rose' ? 'bg-red-500' : stat.color === 'teal' ? 'bg-teal-600' : 'bg-slate-500'}`}
+                                    style={{ width: `${stat.progress}%` }}
+                                ></div>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* Matrix Table - Social VIVO Premium Version */}
-            <div id="printable-report" className="social-card border-none overflow-hidden flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10">
-                <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
-                    <table className="w-full border-separate border-spacing-0">
+            {/* Matrix Table - Financial Ledger Style */}
+            <div id="printable-report" className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 overflow-hidden">
+                <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
+                    <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-slate-900/5 dark:bg-white/5 backdrop-blur-md sticky top-0 z-20">
-                                <th className="px-8 py-6 text-left text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">
+                            <tr className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                                <th className="px-4 py-3 text-left text-xs font-bold uppercase text-slate-500">
                                     <div className="flex items-center gap-2">
                                         <span className="material-icons text-sm">person_search</span>
                                         Unidad & Propietario
                                     </div>
                                 </th>
-                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Saldo Ant. ($)</th>
-                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Mes Curso ($)</th>
-                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Monto Total ($)</th>
-                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Pagos Realizados</th>
-                                <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Por Cobrar ($)</th>
-                                {role !== 'VISOR' && <th className="px-8 py-6 text-center text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Gestión</th>}
+                                <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Saldo Ant. ($)</th>
+                                <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Mes Curso ($)</th>
+                                <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Monto Total ($)</th>
+                                <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Pagos Realizados</th>
+                                <th className="px-4 py-3 text-right text-xs font-bold uppercase text-slate-500">Por Cobrar ($)</th>
+                                {role !== 'VISOR' && <th className="px-4 py-3 text-center text-xs font-bold uppercase text-slate-500">Gestión</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
+                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" className="px-8 py-32 text-center">
-                                        <div className="flex flex-col items-center gap-6">
-                                            <div className="relative">
-                                                <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="material-icons text-emerald-500 animate-pulse">sync</span>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-sm font-display-bold text-slate-400 uppercase tracking-[0.3em]">Sincronizando Matriz</p>
-                                                <p className="text-xs text-slate-500">Consolidando estados de cuenta...</p>
-                                            </div>
+                                    <td colSpan="7" className="px-4 py-12 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-8 h-8 border-2 border-slate-300 border-t-slate-900 rounded-full animate-spin"></div>
+                                            <p className="text-sm font-bold text-slate-500 uppercase">Cargando...</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -495,10 +481,10 @@ const Cobranzas = () => {
                                 const metrics = u.metrics;
                                 const isSolvente = metrics.remaining <= 0.1;
                                 return (
-                                    <tr key={u.id} className="group hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5 transition-all duration-300">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`relative w-12 h-12 rounded-2xl flex items-center justify-center font-display-bold text-sm shadow-sm transition-all duration-500 group-hover:scale-110 ${isSolvente ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}>
+                                    <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded flex items-center justify-center font-bold text-sm ${isSolvente ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-red-50 text-red-600 border border-red-200'}`}>
                                                     {u.number}
                                                     <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${isSolvente ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                                                 </div>
