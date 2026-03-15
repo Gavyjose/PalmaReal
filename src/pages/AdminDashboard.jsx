@@ -513,50 +513,44 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Bottom Insight Row: Premium Social Design */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2 group relative overflow-hidden bg-slate-900 rounded-[3rem] p-12 flex flex-col justify-between border-slate-800 transition-all hover:shadow-[0_40px_100px_rgba(0,0,0,0.3)]">
-                    <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_30%_-20%,#3b82f620,transparent)]"></div>
-                    <div className="relative z-10 flex flex-col md:flex-row items-start justify-between gap-10">
-                        <div className="space-y-4">
-                            <h5 className="text-white font-black uppercase tracking-tight text-3xl max-w-sm leading-tight">
-                                Optimiza tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Recaudado VIVO</span>
+            {/* Bottom Insight Row: Financial Ledger Style */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 bg-slate-900 rounded-md p-6 flex flex-col justify-between border border-slate-700">
+                    <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                        <div className="space-y-3">
+                            <h5 className="text-white font-bold uppercase text-xl max-w-sm">
+                                Optimiza tu <span className="text-emerald-500">Recaudación</span>
                             </h5>
-                            <p className="text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
-                                Ejecuta proyecciones de flujo inteligente para el mes de {data?.periods?.[0]?.period_name.split(' ')[1] || 'siguiente período'} basadas en patrones de pago históricos.
+                            <p className="text-slate-400 text-sm max-w-sm">
+                                Ejecuta proyecciones de flujo para el mes de {data?.periods?.[0]?.period_name.split(' ')[1] || 'siguiente período'}.
                             </p>
                             {userRole !== 'VISOR' && (
-                                <div className="flex gap-4 pt-4">
-                                    <button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-10 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center gap-3 shadow-2xl shadow-emerald-600/30 active:scale-95">
+                                <div className="flex gap-3 pt-2">
+                                    <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-bold text-xs uppercase flex items-center gap-2">
                                         Simular Proyección
                                         <span className="material-icons text-sm">rocket_launch</span>
                                     </button>
-                                    <button className="px-8 py-5 rounded-3xl border border-slate-700 text-slate-300 font-black uppercase tracking-[0.1em] text-[10px] hover:bg-slate-800 transition-all active:scale-95">
+                                    <button className="px-4 py-2 rounded-md border border-slate-600 text-slate-300 font-bold text-xs uppercase hover:bg-slate-800">
                                         Auditar Datos
                                     </button>
                                 </div>
                             )}
                         </div>
-                        <div className="hidden md:flex flex-1 justify-end">
-                            <div className="w-56 h-56 rounded-[3rem] bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 flex flex-col justify-between relative shadow-2xl skew-x-3 -rotate-3 transition-transform group-hover:rotate-0">
-                                <span className="material-icons text-emerald-500 text-4xl">auto_awesome</span>
+                        <div className="hidden md:flex">
+                            <div className="w-32 h-32 bg-slate-800 rounded-md border border-slate-700 p-4 flex flex-col justify-between">
+                                <span className="material-icons text-emerald-500 text-xl">auto_awesome</span>
                                 <div>
-                                    <p className="text-white font-black text-2xl tracking-tighter">$ {formatNumber(metrics?.totalExpected || 0)}</p>
-                                    <p className="text-slate-500 text-[9px] font-black uppercase tracking-widest mt-1">META DE CIERRE</p>
-                                </div>
-                                <div className="absolute -top-4 -right-4 w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20">
-                                    <span className="material-icons text-sm">trending_up</span>
+                                    <p className="text-white font-mono font-bold text-lg">$ {formatNumber(metrics?.totalExpected || 0)}</p>
+                                    <p className="text-slate-500 text-[9px] font-bold uppercase mt-1">META DE CIERRE</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <span className="material-icons absolute -right-16 -bottom-16 text-white/[0.03] text-[350px] select-none pointer-events-none rotate-12">insights</span>
                 </div>
 
-                <div className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white dark:border-slate-800 p-10 rounded-[3rem] shadow-2xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -translate-y-12 translate-x-12 blur-3xl group-hover:bg-blue-500/10 transition-colors"></div>
-                    <h5 className="font-black uppercase tracking-[0.2em] text-[10px] text-slate-400 mb-8 flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 p-4">
+                    <h5 className="font-bold uppercase text-[10px] text-slate-500 mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-slate-900 dark:bg-white"></span>
                         Distribución de Salud
                     </h5>
 

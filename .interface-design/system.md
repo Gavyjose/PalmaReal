@@ -15,33 +15,82 @@
   - Accent/Focus: monochrome `ring-slate-900`, `bg-slate-900 text-white` (avoiding generic blue/indigo).
 
 ## Typography
-- **Primary**: Inter or Roboto (sans-serif, structural).
-- **Data (Numbers)**: `font-mono` (`ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas`). All financial figures MUST be monospaced to align vertically.
-- **Scale**: Very dense. Base text `text-sm`, metadata `text-xs`, headers `text-[10px] font-bold uppercase tracking-widest text-slate-500`.
+- **Primary**: Sans-serif (Inter, Roboto, system-ui).
+- **Data (Numbers)**: `font-mono` for all financial figures to align vertically.
+- **Scale**: Dense. Base text `text-sm`, metadata `text-xs`, headers `text-xs font-bold uppercase`.
 
 ## Depth & Elevation
 - **Strategy**: Borders-only. NO drop shadows (`shadow-none`) anywhere.
 - **Surfaces**:
   - Base: `bg-white`
-  - Inset (Tables/Grids): `bg-slate-50` with inset shadows if needed, or just plain.
-  - Floating (Modals/Dropdowns): `bg-white` with a `border-2 border-slate-900` to simulate elevation through high contrast instead of soft blurring. Dropdowns can have sharp shadows like `shadow-[4px_4px_0_0_rgba(15,23,42,1)]` (brutalist shadow) or just intense borders. Let's stick to intense borders: `border border-slate-300 shadow-sm` is fine, but to keep 'Financial Ledger': `border border-slate-300 shadow-none`.
+  - Inset (Tables/Grids): `bg-slate-50`
+  - Floating (Modals/Dropdowns): `bg-white` with border `border-slate-300`.
 
 ## Spacing
-- Base unit: Strict 4px scale.
-- Components are tight: `p-2` or `p-3` for cells. `gap-2` for list items. Large padding only used to frame the main content (`p-6` or `p-8`).
+- Base unit: 4px (Tailwind default).
+- Components: `p-3` or `p-4` for cells. `gap-2` or `gap-4` for list items. Large padding only used to frame main content (`p-4` or `p-6`).
 
-## Signature Elements
-1. **Vertical Bimonetary Stack**: Instead of wide tables with duplicated columns, USD and Bs amounts are stacked vertically in a single cell using a small monospaced font.
-```tsx
-<div className="flex flex-col font-mono text-right">
-  <span className="text-sm font-bold text-slate-900">$ 45.00</span>
-  <span className="text-[10px] text-slate-500 font-medium">Bs 1642.50</span>
+## Migration Complete - Components Updated
+
+### Pages Fixed
+- [x] AdminDashboard.jsx
+- [x] Cobranzas.jsx
+- [x] OwnerPortal.jsx
+- [x] SpecialQuotas.jsx
+
+### Components Fixed
+- [x] OwnerOverviewCard.jsx
+- [x] DebtEvolutionChart.jsx
+- [x] PaymentHistoryTable.jsx
+- [x] OwnerAnnouncements.jsx
+- [x] SpecialProjectsFeed.jsx
+
+## Design Tokens
+
+### Border Radius
+| Token | Use |
+|-------|-----|
+| `rounded-sm` | Badges, small elements |
+| `rounded` | Buttons, inputs |
+| `rounded-md` | Cards, panels |
+| `rounded-lg` | Modals |
+
+### Components Pattern
+```jsx
+// Card
+<div className="bg-white border border-slate-200 rounded-md p-4">
+  {/* content */}
 </div>
-```
-2. **Dense Borders Matrix**: Heavy use of `divide-y divide-slate-200` and explicit table rows/borders. Grids look like literal ledgers.
-3. **Monochrome Badges**: Status badges use border styling rather than solid color fills. High contrast, sharp corners `rounded-sm` or `rounded`.
-4. **Header Architecture**: Titles are huge, black (`font-black text-slate-900 text-3xl tracking-tight`), bordered underneath by a 1px `border-slate-200`.
 
-## Architecture Notes
-- Buttons: Flat, slightly rounded (`rounded-md`), high contrast (`bg-slate-900 text-white hover:bg-slate-800 focus:ring-2 focus:ring-slate-900 focus:ring-offset-2`).
-- Inputs: `bg-white border border-slate-300 rounded-md shadow-sm focus:ring-1 focus:ring-slate-900 focus:border-slate-900 text-sm`.
+// Table Header
+<tr className="bg-slate-50 border-b border-slate-200">
+  <th className="px-4 py-3 text-xs font-bold uppercase text-slate-500">Header</th>
+</tr>
+
+// Button Primary
+<button className="px-4 py-2 bg-slate-900 text-white rounded font-bold text-sm hover:bg-slate-800">
+  Action
+</button>
+
+// Input
+<input className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-1 focus:ring-slate-900" />
+
+// Metric Card
+<div className="bg-emerald-50 border border-emerald-200 rounded-md p-4">
+  <span className="text-xs font-bold text-emerald-600 uppercase">Label</span>
+  <span className="text-xl font-mono font-bold text-emerald-700">$1,234</span>
+</div>
+
+// Status Badge
+<span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-bold uppercase border border-emerald-200">
+  Status
+</span>
+```
+
+## Anti-Patterns (DO NOT USE)
+- `rounded-[2rem]`, `rounded-[2.5rem]`, `rounded-[3rem]`
+- `shadow-xl`, `shadow-2xl`, `shadow-3xl`
+- `backdrop-blur-*`
+- `bg-gradient-to-*`
+- `animate-*`
+- `font-display-*`

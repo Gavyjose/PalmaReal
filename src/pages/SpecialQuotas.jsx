@@ -246,7 +246,7 @@ const SpecialQuotas = () => {
 
     const handleRepairData = async () => {
         try {
-            setLoading(true);
+            setIsMutating(true);
             // 1. Get all payments for this project
             const { data: allPay, error: fetchError } = await supabase
                 .from('special_quota_payments')
@@ -521,30 +521,26 @@ const SpecialQuotas = () => {
     };
 
     return (
-        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 gap-8 min-h-screen animate-fade-in text-slate-800 dark:text-slate-100">
-            {/* Page Header - Premium Glassmorphism */}
-            <div className="relative group p-8 rounded-[2.5rem] bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden active-premium-card transition-all duration-700">
-                {/* Decorative Background Elements */}
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
-                <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-teal-500/5 rounded-full blur-2xl group-hover:bg-teal-500/15 transition-all duration-700"></div>
-
-                <div className="relative flex flex-wrap justify-between items-center gap-8">
-                    <div className="flex flex-col gap-2">
-                        <nav className="flex items-center gap-3 text-[10px] font-display-bold uppercase tracking-[0.2em] text-emerald-600/70 dark:text-emerald-400/70 mb-1">
-                            <span className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer">Finanzas</span>
+        <div className="flex flex-col flex-1 max-w-[1600px] mx-auto w-full p-4 gap-4 text-slate-800 dark:text-slate-100">
+            {/* Page Header - Financial Ledger Style */}
+            <div className="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-700 p-4">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                    <div className="flex flex-col gap-1">
+                        <nav className="flex items-center gap-2 text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 mb-1">
+                            <span>Finanzas</span>
                             <span className="opacity-30">/</span>
                             <span className="text-slate-900 dark:text-white">Gestión de Cuotas</span>
                         </nav>
-                        <h1 className="text-4xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight leading-none bg-gradient-to-r from-slate-900 via-emerald-800 to-slate-900 dark:from-white dark:via-emerald-400 dark:to-white bg-clip-text text-transparent">
-                            Presupuestos & <span className="text-emerald-600 dark:text-emerald-500 italic">Cuotas Especiales</span>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white uppercase">
+                            Presupuestos & <span className="text-emerald-600">Cuotas Especiales</span>
                         </h1>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm font-display-medium mt-1">Seguimiento financiero de alta precisión para proyectos extraordinarios.</p>
+                        <p className="text-sm text-slate-500 mt-1">Seguimiento financiero de proyectos extraordinarios.</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-4">
-                        {/* Tower Selector - Glass Style */}
-                        <div className="flex flex-col gap-1.5 min-w-[140px]">
-                            <span className="text-[10px] font-display-black uppercase tracking-widest text-slate-500 pl-1 dark:text-slate-400/60">Bloque Activo</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Tower Selector - Financial Style */}
+                        <div className="flex flex-col gap-1 min-w-[120px]">
+                            <span className="text-[10px] font-bold uppercase text-slate-500 pl-1">Bloque Activo</span>
                             <div className="relative">
                                 <select
                                     value={selectedTower}
@@ -552,20 +548,18 @@ const SpecialQuotas = () => {
                                         setLocalSelectedTower(e.target.value);
                                         setLastSelectedTower(e.target.value);
                                     }}
-                                    className="w-full appearance-none bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-2xl px-5 py-3.5 font-display-bold text-sm uppercase tracking-wider text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 shadow-xl pr-12 transition-all"
+                                    className="w-full appearance-none bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md px-3 py-2 font-bold text-sm uppercase text-slate-800 dark:text-white outline-none focus:ring-1 focus:ring-slate-900"
                                 >
                                     {activeTowers.map(t => <option key={t.name} value={t.name}>Torre {t.name}</option>)}
                                 </select>
-                                <span className="material-icons absolute right-4 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none">expand_more</span>
+                                <span className="material-icons absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">expand_more</span>
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex items-end gap-3 h-full pt-4">
-                            <button className="h-[54px] px-6 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-white/40 dark:border-white/5 rounded-2xl text-slate-700 dark:text-slate-300 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-white dark:hover:bg-slate-700 transition-all shadow-xl active:scale-95 group">
-                                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-xl group-hover:bg-emerald-500 group-hover:text-white transition-all">
-                                    <span className="material-icons text-sm">download</span>
-                                </div>
+                        {/* Action Buttons - Financial Style */}
+                        <div className="flex items-end gap-2 h-full pt-4">
+                            <button className="h-10 px-4 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-slate-700 dark:text-slate-300 text-xs font-bold uppercase flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                <span className="material-icons text-sm">download</span>
                                 <span>Exportar</span>
                             </button>
 
@@ -575,20 +569,16 @@ const SpecialQuotas = () => {
                                         <>
                                             <button
                                                 onClick={() => setShowExpenseModal(true)}
-                                                className="h-[54px] px-6 bg-rose-500/10 dark:bg-rose-500/5 backdrop-blur-md border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-rose-500 hover:text-white transition-all shadow-xl active:scale-95 group"
+                                                className="h-10 px-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md text-red-600 dark:text-red-400 text-xs font-bold uppercase flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                                             >
-                                                <div className="p-2 bg-rose-500/20 rounded-xl group-hover:bg-white group-hover:text-rose-500 transition-all">
-                                                    <span className="material-icons text-sm">payments</span>
-                                                </div>
+                                                <span className="material-icons text-sm">payments</span>
                                                 <span>Gasto</span>
                                             </button>
                                             <button
                                                 onClick={() => setShowCloseConfirmModal(true)}
-                                                className="h-[54px] px-6 bg-slate-500/10 dark:bg-slate-500/10 backdrop-blur-md border border-slate-400/30 rounded-2xl text-slate-600 dark:text-slate-300 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-slate-600 hover:text-white transition-all shadow-xl active:scale-95 group"
+                                                className="h-10 px-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-md text-slate-600 dark:text-slate-300 text-xs font-bold uppercase flex items-center gap-2 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                                             >
-                                                <div className="p-2 bg-slate-400/20 rounded-xl group-hover:bg-white group-hover:text-slate-600 transition-all">
-                                                    <span className="material-icons text-sm">archive</span>
-                                                </div>
+                                                <span className="material-icons text-sm">archive</span>
                                                 <span>Cerrar</span>
                                             </button>
                                         </>
@@ -597,9 +587,9 @@ const SpecialQuotas = () => {
                                     {project ? (
                                         <button
                                             onClick={() => setShowPaymentModal(true)}
-                                            className="h-[54px] px-8 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(5,150,105,0.3)] hover:shadow-[0_15px_35px_rgba(5,150,105,0.4)] transition-all active:scale-95 group"
+                                            className="h-[54px] px-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md text-xs font-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-xl hover:opacity-90 transition-all active:scale-95 group"
                                         >
-                                            <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-90 transition-all duration-500">
+                                            <div className="p-2 bg-white/10 dark:bg-slate-900/10 rounded-md group-hover:rotate-90 transition-all duration-500">
                                                 <span className="material-icons text-sm">add_circle</span>
                                             </div>
                                             <span>Abonar Cuota</span>
@@ -607,9 +597,9 @@ const SpecialQuotas = () => {
                                     ) : (
                                         <button
                                             onClick={() => setShowProjectModal(true)}
-                                            className="h-[54px] px-8 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_35px_rgba(37,99,235,0.4)] transition-all active:scale-95 group"
+                                            className="h-[54px] px-8 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 group"
                                         >
-                                            <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-12 transition-all">
+                                            <div className="p-2 bg-white/20 rounded-md group-hover:rotate-12 transition-all">
                                                 <span className="material-icons text-sm">rocket_launch</span>
                                             </div>
                                             <span>Lanzar Proyecto</span>
@@ -640,52 +630,51 @@ const SpecialQuotas = () => {
                 </div>
             ) : (
                 <>
-                    {/* Configuration & KPIs - Social VIVO Style */}
-                    <section className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                        {/* Config Panel - Tech Desglose */}
-                        <div className="xl:col-span-1 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden group active-premium-card">
-                            <h3 className="text-lg font-display-black text-slate-900 dark:text-white uppercase tracking-tight mb-6 flex items-center gap-3">
-                                <span className="p-1.5 bg-emerald-500 rounded-lg text-white material-icons text-xs">tune</span>
+                    {/* Configuration & KPIs - Financial Ledger Style */}
+                    <section className="grid grid-cols-1 xl:grid-cols-4 gap-4">
+                        {/* Config Panel */}
+                        <div className="xl:col-span-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md p-4">
+                            <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase mb-4 flex items-center gap-2">
+                                <span className="p-1 bg-emerald-600 rounded text-white material-icons text-xs">tune</span>
                                 Desglose Técnico
                             </h3>
-                            <div className="space-y-6 relative z-10">
-                                <label className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-display-black uppercase tracking-[0.1em] text-slate-400 pl-1">Presupuesto Referencial</span>
-                                    <div className="relative group/input">
-                                        <div className="absolute inset-x-0 h-full bg-emerald-500/5 rounded-2xl group-hover/input:bg-emerald-500/10 transition-all"></div>
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-600 font-display-bold text-xl">$</span>
+                            <div className="space-y-4">
+                                <label className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-bold uppercase text-slate-500">Presupuesto Referencial</span>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold text-lg">$</span>
                                         <input
-                                            className="w-full pl-10 pr-4 py-4 bg-transparent border-b-2 border-emerald-500/20 text-slate-900 dark:text-white font-display-bold text-2xl outline-none focus:border-emerald-500 transition-all"
+                                            className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md text-slate-900 dark:text-white font-mono font-bold text-xl outline-none"
                                             type="text"
                                             value={formatNumber(project.total_budget)}
                                             readOnly
                                         />
                                     </div>
                                 </label>
-                                <div className="flex flex-col gap-2">
-                                    <span className="text-[10px] font-display-black uppercase tracking-[0.1em] text-slate-400 pl-1">Estructura de Cuota</span>
-                                    <div className="px-5 py-4 rounded-2xl bg-white/40 dark:bg-slate-800/40 border border-white/20 dark:border-white/5 font-display-bold text-lg text-slate-900 dark:text-emerald-400 flex items-center justify-between">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-bold uppercase text-slate-500">Estructura de Cuota</span>
+                                    <div className="px-4 py-3 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 font-bold text-base text-slate-900 dark:text-emerald-400 flex items-center justify-between">
                                         <span>{project.installments_count} PARTES</span>
-                                        <span className="text-xs font-display-medium text-slate-400">(Tranches)</span>
+                                        <span className="text-xs text-slate-400">(Tranches)</span>
                                     </div>
                                 </div>
-                                <div className="pt-6 border-t border-slate-200 dark:border-white/10 flex flex-col gap-3 font-display-medium text-xs">
-                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
+                                <div className="pt-4 border-t border-slate-200 dark:border-slate-600 flex flex-col gap-2 text-xs">
+                                    <div className="flex justify-between items-center text-slate-500">
                                         <span>Denominación:</span>
-                                        <span className="font-display-bold text-slate-900 dark:text-white uppercase truncate max-w-[140px]">{project.name}</span>
+                                        <span className="font-bold text-slate-900 dark:text-white uppercase truncate max-w-[140px]">{project.name}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-slate-500 dark:text-slate-400">
-                                        <span>Estado Operativo:</span>
-                                        <span className="px-2 py-1 bg-emerald-500 text-white text-[9px] font-display-black uppercase tracking-widest rounded-md">{project.status}</span>
+                                    <div className="flex justify-between items-center text-slate-500">
+                                        <span>Estado:</span>
+                                        <span className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-bold uppercase rounded-sm">{project.status}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* KPI Cards Container */}
-                        <div className="xl:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        {/* KPI Cards Container - Financial Ledger */}
+                        <div className="xl:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
                             {/* Card 1: Recaudación */}
-                            <div className="relative group p-8 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 rounded-[2.5rem] border border-emerald-500/20 shadow-xl overflow-hidden active-premium-card">
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md p-4">
                                 <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
                                     <span className="material-icons text-7xl text-emerald-600">savings</span>
                                 </div>
@@ -694,68 +683,55 @@ const SpecialQuotas = () => {
                                         <div className="p-2 bg-emerald-500 rounded-2xl shadow-lg shadow-emerald-500/40 text-white flex items-center justify-center">
                                             <span className="material-icons text-base">account_balance_wallet</span>
                                         </div>
-                                        <div className="py-1 px-3 bg-emerald-500 text-white text-[10px] font-display-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/20">
+                                        <div className="py-1 px-3 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/20">
                                             {progressPercent.toFixed(1)}% RECAUDADO
                                         </div>
                                     </div>
                                     <div className="mt-8">
-                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Volumen Recolectado</p>
-                                        <p className="text-4xl font-display-black text-emerald-600 dark:text-emerald-400 tracking-tight leading-none">${formatNumber(totalCollected)}</p>
-                                        <div className="flex items-center gap-2 mt-3 p-2 bg-white/40 dark:bg-slate-800/40 rounded-xl border border-white/20">
-                                            <span className="material-icons text-xs text-emerald-500">payments</span>
-                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-display-bold uppercase tracking-widest">Efectivo: ${formatNumber(totalCollectedCashUSD)}</p>
-                                        </div>
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Efectivo: ${formatNumber(totalCollectedCashUSD)}</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Card 2: Ejecución */}
-                            <div className="relative group p-8 bg-gradient-to-br from-rose-500/5 to-orange-500/5 rounded-[2.5rem] border border-rose-500/20 shadow-xl overflow-hidden active-premium-card">
-                                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all group-hover:scale-110">
-                                    <span className="material-icons text-7xl text-rose-600">engineering</span>
-                                </div>
-                                <div className="relative flex flex-col h-full justify-between">
-                                    <div className="flex justify-between items-start">
-                                        <div className="p-2 bg-rose-500 rounded-2xl shadow-lg shadow-rose-500/40 text-white flex items-center justify-center">
-                                            <span className="material-icons text-base">shopping_cart</span>
-                                        </div>
-                                        <div className="py-1 px-3 bg-rose-500 text-white text-[10px] font-display-black uppercase tracking-widest rounded-full shadow-lg shadow-rose-500/20">
-                                            {executionPercent.toFixed(1)}% EJECUTADO
-                                        </div>
+                            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="p-2 bg-red-500 rounded text-white flex items-center justify-center">
+                                        <span className="material-icons text-base">shopping_cart</span>
                                     </div>
-                                    <div className="mt-8">
-                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Inversión Realizada</p>
-                                        <p className="text-4xl font-display-black text-rose-600 dark:text-rose-400 tracking-tight leading-none">${formatNumber(totalExecuted)}</p>
-                                        <div className="flex gap-2 mt-3">
-                                            <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-display-bold uppercase tracking-widest text-slate-500">MAT: ${formatNumber(totalExecutedMaterials)}</div>
-                                            <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-display-bold uppercase tracking-widest text-slate-500">M.O: ${formatNumber(totalExecutedLabor)}</div>
-                                        </div>
+                                    <div className="px-2 py-0.5 bg-red-600 text-white text-xs font-bold uppercase rounded-sm">
+                                        {executionPercent.toFixed(1)}% EJECUTADO
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-bold text-slate-400 uppercase mb-1">Inversión Realizada</p>
+                                    <p className="text-2xl font-mono font-bold text-red-600 dark:text-red-400">${formatNumber(totalExecuted)}</p>
+                                    <div className="flex gap-2 mt-3">
+                                        <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-bold uppercase tracking-widest text-slate-500">MAT: ${formatNumber(totalExecutedMaterials)}</div>
+                                        <div className="px-2 py-1 bg-white/40 dark:bg-slate-800/40 rounded-lg border border-white/20 text-[8px] font-bold uppercase tracking-widest text-slate-500">M.O: ${formatNumber(totalExecutedLabor)}</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Card 3: Saldo Social Board */}
-                            <div className="relative group p-8 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-950 rounded-[2.5rem] shadow-2xl overflow-hidden active-premium-card border-t-4 border-emerald-500">
-                                <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-700"></div>
-                                <div className="relative flex flex-col h-full justify-between">
-                                    <div className="flex justify-between items-start">
-                                        <div className="p-2 bg-white/10 rounded-2xl text-white flex items-center justify-center">
-                                            <span className="material-icons text-base">account_balance</span>
-                                        </div>
-                                        <span className={`px-2 py-0.5 rounded-md text-[9px] font-display-black uppercase tracking-widest ${currentCashBalance >= 0 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500 text-white'}`}>
-                                            {currentCashBalance >= 0 ? 'LIQUIDEZ ALTA' : 'DÉFICIT'}
-                                        </span>
+                            {/* Card 3: Saldo */}
+                            <div className="p-4 bg-slate-900 rounded-md border-t-4 border-emerald-600">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div className="p-2 bg-slate-700 rounded text-white flex items-center justify-center">
+                                        <span className="material-icons text-base">account_balance</span>
                                     </div>
-                                    <div className="mt-8">
-                                        <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-1">Disponibilidad en Caja</p>
-                                        <div className="flex items-baseline gap-2">
-                                            <p className={`text-4xl font-display-black tracking-tight leading-none ${currentCashBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
-                                                ${formatNumber(Math.abs(currentCashBalance))}
-                                            </p>
-                                            {currentCashBalance < 0 && <span className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest animate-pulse">OVERDRAWN</span>}
-                                        </div>
-                                        <p className="text-[9px] text-slate-500 font-display-medium mt-3 leading-relaxed">Fondos auditados disponibles para asignación inmediata en obra.</p>
+                                    <span className={`px-2 py-0.5 rounded-sm text-xs font-bold uppercase ${currentCashBalance >= 0 ? 'bg-emerald-900 text-emerald-400 border border-emerald-700' : 'bg-red-600 text-white'}`}>
+                                        {currentCashBalance >= 0 ? 'LIQUIDEZ' : 'DÉFICIT'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Disponibilidad en Caja</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className={`text-4xl font-bold tracking-tight leading-none ${currentCashBalance >= 0 ? 'text-white' : 'text-rose-400'}`}>
+                                            ${formatNumber(Math.abs(currentCashBalance))}
+                                        </p>
+                                        {currentCashBalance < 0 && <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest animate-pulse">OVERDRAWN</span>}
                                     </div>
+                                    <p className="text-[9px] text-slate-500 font-medium mt-3 leading-relaxed">Fondos auditados disponibles para asignación inmediata en obra.</p>
                                 </div>
                             </div>
                         </div>
@@ -766,13 +742,13 @@ const SpecialQuotas = () => {
                         <div className="flex items-center justify-between px-2">
                             <div className="flex items-center gap-4">
                                 <div className="w-1.5 h-8 bg-emerald-500 rounded-full"></div>
-                                <h2 className="text-2xl font-display-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                <h2 className="text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">
                                     Control de Cobranza <span className="text-emerald-500">Torre {selectedTower}</span>
                                 </h2>
                                 {project && userRole !== 'VISOR' && (
                                     <button
                                         onClick={handleRepairData}
-                                        className="ml-4 px-4 py-1.5 text-[9px] font-display-black uppercase tracking-widest border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all rounded-lg active:scale-95 flex items-center gap-2"
+                                        className="ml-4 px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all rounded-lg active:scale-95 flex items-center gap-2"
                                     >
                                         <span className="material-icons text-[10px]">sync</span>
                                         Sincronizar Auditoría
@@ -780,27 +756,27 @@ const SpecialQuotas = () => {
                                 )}
                             </div>
                             <div className="flex gap-6">
-                                <span className="flex items-center gap-2 text-[10px] font-display-black text-slate-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div> Total Pagado
                                 </span>
-                                <span className="flex items-center gap-2 text-[10px] font-display-black text-slate-400 uppercase tracking-widest">
+                                <span className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     <div className="w-2.5 h-2.5 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div> Pendiente
                                 </span>
                             </div>
                         </div>
 
-                        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl max-h-[700px] relative group/table active-premium-card">
-                            {/* Header row - Sticky & Premium */}
-                            <div className="grid grid-cols-12 gap-4 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xl border-b border-white/20 dark:border-white/5 px-10 py-6 sticky top-0 z-30 shadow-sm">
-                                <div className="col-span-3 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Unidad Mobiliaria</div>
-                                <div className="col-span-4 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Titular / Razón Social</div>
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 text-right">Recaudado ($)</div>
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-rose-600 dark:text-rose-400 text-right">Pendiente ($)</div>
-                                <div className="col-span-1 text-center text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Audit</div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden flex flex-col max-h-[500px]">
+                            {/* Header row - Financial Ledger */}
+                            <div className="grid grid-cols-12 gap-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 sticky top-0">
+                                <div className="col-span-3 text-xs font-bold uppercase text-slate-500">Unidad</div>
+                                <div className="col-span-4 text-xs font-bold uppercase text-slate-500">Titular</div>
+                                <div className="col-span-2 text-xs font-bold uppercase text-emerald-600 text-right">Recaudado ($)</div>
+                                <div className="col-span-2 text-xs font-bold uppercase text-red-600 text-right">Pendiente ($)</div>
+                                <div className="col-span-1 text-center text-xs font-bold uppercase text-slate-500">Audit</div>
                             </div>
 
-                            {/* Body - Virtualized style scroll */}
-                            <div className="flex flex-col divide-y divide-white/10 dark:divide-white/5 overflow-y-auto custom-scrollbar-thin">
+                            {/* Body */}
+                            <div className="flex flex-col divide-y divide-slate-200 dark:divide-slate-700 overflow-y-auto">
                                 {units.map((unit) => {
                                     const unitPayments = payments.filter(p => p.unit_id === unit.id);
                                     const unitPaidAmount = unitPayments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
@@ -808,39 +784,33 @@ const SpecialQuotas = () => {
                                     const isExpanded = expandedUnitId === unit.id;
 
                                     return (
-                                        <div key={unit.id} className="flex flex-col group/row transition-all duration-300">
+                                        <div key={unit.id} className="flex flex-col">
                                             {/* Main Row */}
                                             <div
-                                                className={`grid grid-cols-12 gap-4 px-10 py-5 items-center cursor-pointer transition-all duration-300 ${isExpanded ? 'bg-emerald-500/5 dark:bg-emerald-500/10' : 'hover:bg-white/60 dark:hover:bg-white/5'}`}
+                                                className={`grid grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer transition-colors ${isExpanded ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                                                 onClick={() => setExpandedUnitId(isExpanded ? null : unit.id)}
                                             >
-                                                <div className="col-span-3 flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-display-black text-sm transition-all shadow-lg ${isExpanded ? 'bg-emerald-500 text-white shadow-emerald-500/20' : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white group-hover/row:bg-emerald-500 group-hover/row:text-white'}`}>
+                                                <div className="col-span-3 flex items-center gap-2">
+                                                    <div className={`w-8 h-8 rounded flex items-center justify-center font-bold text-sm ${isExpanded ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white'}`}>
                                                         {unit.number}
                                                     </div>
-                                                    <span className="font-display-black text-slate-900 dark:text-white text-base">U-{unit.number}</span>
+                                                    <span className="font-bold text-slate-900 dark:text-white">U-{unit.number}</span>
                                                 </div>
-                                                <div className="col-span-4 flex items-center gap-3">
-                                                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-display-black text-slate-500 group-hover/row:bg-emerald-500 group-hover/row:text-white transition-all">
+                                                <div className="col-span-4 flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-bold text-slate-500">
                                                         {unit.owners?.full_name?.charAt(0) || '?'}
                                                     </div>
-                                                    <span className="font-display-bold text-sm text-slate-700 dark:text-slate-300 uppercase truncate max-w-[220px]">{unit.owners?.full_name || '--'}</span>
+                                                    <span className="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase truncate max-w-[180px]">{unit.owners?.full_name || '--'}</span>
                                                 </div>
                                                 <div className="col-span-2 text-right">
-                                                    <div className="flex flex-col items-end">
-                                                        <span className={`font-display-black text-lg ${unitPaidAmount > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-700'}`}>
-                                                            ${formatNumber(unitPaidAmount)}
-                                                        </span>
-                                                        {unitPaidAmount > 0 && <span className="text-[9px] font-display-black text-emerald-500/60 uppercase tracking-widest mt-[-2px]">Validado</span>}
-                                                    </div>
+                                                    <span className={`font-mono font-bold ${unitPaidAmount > 0 ? 'text-emerald-600' : 'text-slate-300'}`}>
+                                                        ${formatNumber(unitPaidAmount)}
+                                                    </span>
                                                 </div>
                                                 <div className="col-span-2 text-right">
-                                                    <div className="flex flex-col items-end">
-                                                        <span className={`font-display-black text-lg ${unitDebtAmount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-300 dark:text-slate-700'}`}>
-                                                            ${formatNumber(unitDebtAmount)}
-                                                        </span>
-                                                        {unitDebtAmount > 0 && <span className="text-[9px] font-display-black text-rose-500/60 uppercase tracking-widest mt-[-2px]">Pendiente</span>}
-                                                    </div>
+                                                    <span className={`font-mono font-bold ${unitDebtAmount > 0 ? 'text-red-600' : 'text-slate-300'}`}>
+                                                        ${formatNumber(unitDebtAmount)}
+                                                    </span>
                                                 </div>
                                                 <div className="col-span-1 flex justify-center">
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isExpanded ? 'bg-emerald-500 text-white rotate-180' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 group-hover/row:text-emerald-500'}`}>
@@ -861,16 +831,16 @@ const SpecialQuotas = () => {
                                                             <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
                                                                 <span className="material-icons text-sm">segment</span>
                                                             </div>
-                                                            <span className="text-xs font-display-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Liquidación de Tramos</span>
+                                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Liquidación de Tramos</span>
                                                         </div>
                                                         <div className="grid grid-cols-4 gap-4">
                                                             {[...Array(project.installments_count)].map((_, i) => {
                                                                 const isPaidInst = isPaid(unit.id, i + 1);
                                                                 return (
                                                                     <div key={i} className="flex flex-col gap-2 items-center">
-                                                                        <span className="text-[10px] font-display-black text-slate-400">#{i + 1}</span>
+                                                                        <span className="text-[10px] font-bold text-slate-400">#{i + 1}</span>
                                                                         {isPaidInst ? (
-                                                                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-110" title="Tramo Pagado">
+                                                                            <div className="w-12 h-12 bg-emerald-600 text-white flex items-center justify-center rounded-xl shadow-lg shadow-emerald-500/10 transition-all hover:scale-105" title="Tramo Pagado">
                                                                                 <span className="material-icons text-xl">check_circle</span>
                                                                             </div>
                                                                         ) : userRole !== 'VISOR' ? (
@@ -900,8 +870,8 @@ const SpecialQuotas = () => {
                                                             })}
                                                         </div>
                                                         <div className="mt-4 p-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-white/40 dark:border-white/5 backdrop-blur-md">
-                                                            <p className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest mb-1">Monto por Tramo</p>
-                                                            <p className="text-xl font-display-black text-slate-900 dark:text-white">${formatNumber(amountPerInstallment)}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Monto por Tramo</p>
+                                                            <p className="text-xl font-bold text-slate-900 dark:text-white">${formatNumber(amountPerInstallment)}</p>
                                                         </div>
                                                     </div>
 
@@ -911,22 +881,22 @@ const SpecialQuotas = () => {
                                                             <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900">
                                                                 <span className="material-icons text-sm">history_edu</span>
                                                             </div>
-                                                            <span className="text-xs font-display-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Libro Mayor Transaccional (Unidad {unit.number})</span>
+                                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Libro Mayor Transaccional (Unidad {unit.number})</span>
                                                         </div>
                                                         {unitPayments.length === 0 ? (
                                                             <div className="flex flex-col items-center justify-center py-10 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-white/40 dark:bg-slate-900/40">
                                                                 <span className="material-icons text-4xl text-slate-300 mb-3">payments</span>
-                                                                <p className="text-xs font-display-bold text-slate-400 uppercase tracking-widest">No hay registros de abono</p>
+                                                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No hay registros de abono</p>
                                                             </div>
                                                         ) : (
                                                             <div className="overflow-hidden rounded-3xl border border-white/20 dark:border-white/5 shadow-2xl">
                                                                 <table className="w-full text-left bg-white/60 dark:bg-slate-900/60 backdrop-blur-md">
                                                                     <thead className="bg-slate-900 dark:bg-slate-950 text-white">
                                                                         <tr>
-                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest">Fecha</th>
-                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest text-right">Importe USD</th>
-                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest">Referencia / Traza</th>
-                                                                            <th className="px-6 py-4 text-[9px] font-display-black uppercase tracking-widest text-center">Asignación</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest">Fecha</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-right">Importe USD</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest">Referencia / Traza</th>
+                                                                            <th className="px-6 py-4 text-[9px] font-bold uppercase tracking-widest text-center">Asignación</th>
                                                                         </tr>
                                                                     </thead>
                                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -934,24 +904,24 @@ const SpecialQuotas = () => {
                                                                             <tr key={p.id} className="hover:bg-emerald-500/5 transition-all">
                                                                                 <td className="px-6 py-4">
                                                                                     <div className="flex flex-col">
-                                                                                        <span className="text-xs font-display-bold text-slate-700 dark:text-slate-300">
+                                                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                                                                                             {new Date(p.payment_date).toLocaleDateString('es-VE')}
                                                                                         </span>
-                                                                                        <span className="text-[9px] font-display-black text-slate-400 uppercase">Procesado</span>
+                                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">Procesado</span>
                                                                                     </div>
                                                                                 </td>
                                                                                 <td className="px-6 py-4 text-right">
-                                                                                    <span className="text-sm font-display-black text-emerald-600 dark:text-emerald-400">
+                                                                                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                                                                                         ${formatNumber(p.amount)}
                                                                                     </span>
                                                                                 </td>
                                                                                 <td className="px-6 py-4">
-                                                                                    <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-display-black text-slate-500 uppercase tracking-wider inline-block">
+                                                                                    <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-bold text-slate-500 uppercase tracking-wider inline-block">
                                                                                         {p.reference || '--'}
                                                                                     </div>
                                                                                 </td>
                                                                                 <td className="px-6 py-4 text-center">
-                                                                                    <div className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-display-black uppercase tracking-[0.15em] rounded-md shadow-lg shadow-emerald-500/10 inline-block">
+                                                                                    <div className="px-3 py-1 bg-emerald-500 text-white text-[9px] font-bold uppercase tracking-[0.15em] rounded-md shadow-lg shadow-emerald-500/10 inline-block">
                                                                                         TRAMO {p.installment_number}
                                                                                     </div>
                                                                                 </td>
@@ -973,26 +943,26 @@ const SpecialQuotas = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-900 dark:bg-slate-950 border-t-4 border-emerald-500 px-12 py-8 items-center sticky bottom-0 z-30 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
                                 <div className="flex items-center gap-10">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-display-black uppercase text-emerald-500 tracking-[0.25em] mb-1">Métrica Recopilada</span>
+                                        <span className="text-[10px] font-bold uppercase text-emerald-500 tracking-[0.25em] mb-1">Métrica Recopilada</span>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-3xl font-display-black text-white">${formatNumber(totalCollected)}</span>
-                                            <span className="text-xs font-display-bold text-slate-500 uppercase">USD TOTAL</span>
+                                            <span className="text-3xl font-bold text-white">${formatNumber(totalCollected)}</span>
+                                            <span className="text-xs font-bold text-slate-500 uppercase">USD TOTAL</span>
                                         </div>
                                     </div>
                                     <div className="h-12 w-[1px] bg-white/10"></div>
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-display-black uppercase text-slate-500 tracking-[0.25em] mb-1">Caja Efectivo</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-500 tracking-[0.25em] mb-1">Caja Efectivo</span>
                                         <div className="flex items-baseline gap-2">
-                                            <span className="text-2xl font-display-black text-emerald-400/90">${formatNumber(totalCollectedCashUSD)}</span>
-                                            <span className="text-[9px] font-display-black text-slate-500 uppercase tracking-widest">In-Caja</span>
+                                            <span className="text-2xl font-bold text-emerald-400/90">${formatNumber(totalCollectedCashUSD)}</span>
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">In-Caja</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-12">
                                     <div className="flex flex-col items-end">
-                                        <span className="text-[10px] font-display-black uppercase text-rose-500 tracking-[0.25em] mb-1">Diferencial Moroso</span>
+                                        <span className="text-[10px] font-bold uppercase text-rose-500 tracking-[0.25em] mb-1">Diferencial Moroso</span>
                                         <div className="flex items-baseline gap-3">
-                                            <span className="text-3xl font-display-black text-rose-500">${formatNumber(remainingBudget)}</span>
+                                            <span className="text-3xl font-bold text-rose-500">${formatNumber(remainingBudget)}</span>
                                             <div className="p-1.5 bg-rose-500 rounded-lg text-white material-icons text-xs">trending_down</div>
                                         </div>
                                     </div>
@@ -1006,69 +976,63 @@ const SpecialQuotas = () => {
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="w-1.5 h-8 bg-rose-500 rounded-full"></div>
-                                <h2 className="text-2xl font-display-black uppercase tracking-tight text-slate-900 dark:text-white">
+                                <h2 className="text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white">
                                     Relación de Ejecución <span className="text-rose-500">(Egresos)</span>
                                 </h2>
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                                    <span className="text-[10px] font-display-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Materiales:</span>
-                                    <span className="text-sm font-display-black text-slate-900 dark:text-white">${formatNumber(totalExecutedMaterials)}</span>
+                                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Materiales:</span>
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white">${formatNumber(totalExecutedMaterials)}</span>
                                 </div>
                                 <div className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 rounded-xl border border-purple-500/20">
-                                    <span className="text-[10px] font-display-black text-purple-600 dark:text-purple-400 uppercase tracking-widest">Mano de Obra:</span>
-                                    <span className="text-sm font-display-black text-slate-900 dark:text-white">${formatNumber(totalExecutedLabor)}</span>
+                                    <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-widest">Mano de Obra:</span>
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white">${formatNumber(totalExecutedLabor)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative group/table active-premium-card">
-                            <div className="grid grid-cols-12 gap-4 bg-white/60 dark:bg-slate-950/60 backdrop-blur-xl border-b border-white/20 dark:border-white/5 px-10 py-6 sticky top-0 z-10">
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Fecha</div>
-                                <div className="col-span-3 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400">Descripción / Concepto</div>
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-center">Categoría</div>
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-right">Importe USD</div>
-                                <div className="col-span-1 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-right">Referencia</div>
-                                <div className="col-span-2 text-[10px] font-display-black uppercase tracking-[0.2em] text-slate-400 text-center">Acciones</div>
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden flex flex-col">
+                            <div className="grid grid-cols-12 gap-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-3 sticky top-0">
+                                <div className="col-span-2 text-xs font-bold uppercase text-slate-500">Fecha</div>
+                                <div className="col-span-3 text-xs font-bold uppercase text-slate-500">Descripción</div>
+                                <div className="col-span-2 text-xs font-bold uppercase text-slate-500 text-center">Categoría</div>
+                                <div className="col-span-2 text-xs font-bold uppercase text-slate-500 text-right">Importe USD</div>
+                                <div className="col-span-1 text-xs font-bold uppercase text-slate-500 text-right">Referencia</div>
+                                <div className="col-span-2 text-xs font-bold uppercase text-slate-500 text-center">Acciones</div>
                             </div>
-                            <div className="flex flex-col divide-y divide-white/10 dark:divide-white/5 max-h-[500px] overflow-y-auto custom-scrollbar-thin">
+                            <div className="flex flex-col divide-y divide-slate-200 dark:divide-slate-700 max-h-[400px] overflow-y-auto">
                                 {projectExpenses.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 opacity-40">
-                                        <span className="material-icons text-5xl mb-4">inventory_2</span>
-                                        <p className="text-sm font-display-bold uppercase tracking-[0.2em]">Sin registros de ejecución</p>
+                                    <div className="flex flex-col items-center justify-center py-12 opacity-40">
+                                        <span className="material-icons text-4xl mb-2">inventory_2</span>
+                                        <p className="text-xs font-bold uppercase">Sin registros</p>
                                     </div>
                                 ) : (
                                     projectExpenses.map((exp) => (
-                                        <div key={exp.id} className="grid grid-cols-12 gap-4 px-10 py-5 items-center hover:bg-white/60 dark:hover:bg-white/5 transition-all duration-300 group/row">
+                                        <div key={exp.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                             <div className="col-span-2">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-display-bold text-slate-500">{exp.date}</span>
-                                                    <span className="text-[9px] font-display-black text-rose-500/60 uppercase tracking-widest mt-0.5">Egreso</span>
-                                                </div>
+                                                <span className="text-xs font-bold text-slate-500">{exp.date}</span>
                                             </div>
                                             <div className="col-span-3">
-                                                <span className="font-display-bold text-sm text-slate-900 dark:text-white uppercase leading-tight">{exp.description}</span>
+                                                <span className="font-bold text-sm text-slate-900 dark:text-white uppercase">{exp.description}</span>
                                             </div>
                                             <div className="col-span-2 flex justify-center">
-                                                <span className={`px-4 py-1.5 text-[9px] font-display-black uppercase tracking-[0.15em] rounded-full shadow-lg border-2 ${exp.category === 'MATERIALES' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20 shadow-blue-500/5' :
-                                                    exp.category === 'MANO DE OBRA' ? 'bg-purple-500/10 text-purple-600 border-purple-500/20 shadow-purple-500/5' :
-                                                        'bg-slate-500/10 text-slate-600 border-slate-500/20 shadow-slate-500/5'
+                                                <span className={`px-2 py-0.5 text-[9px] font-bold uppercase rounded-sm ${exp.category === 'MATERIALES' ? 'bg-blue-50 text-blue-600' :
+                                                    exp.category === 'MANO DE OBRA' ? 'bg-purple-50 text-purple-600' :
+                                                        'bg-slate-100 text-slate-600'
                                                     }`}>
                                                     {exp.category}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 text-right">
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-base font-display-black text-rose-600 dark:text-rose-400">${formatNumber(exp.amount_usd)}</span>
-                                                    <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-tighter">Bs. {formatNumber(exp.amount_bs)} · @{formatNumber(exp.bcv_rate)}</span>
-                                                </div>
+                                                <span className="font-mono font-bold text-red-600">${formatNumber(exp.amount_usd)}</span>
                                             </div>
                                             <div className="col-span-1 text-right">
-                                                <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-[10px] font-display-black text-slate-500 uppercase tracking-wider inline-block">
+                                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-[10px] font-bold text-slate-500 uppercase">
                                                     {exp.reference || '--'}
-                                                </div>
+                                                </span>
                                             </div>
-                                            <div className="col-span-2 flex justify-center gap-2">
+                                            <div className="col-span-2 flex justify-center gap-1">
                                                 {userRole !== 'VISOR' ? (
                                                     <>
                                                         <button
@@ -1099,12 +1063,12 @@ const SpecialQuotas = () => {
                             {projectExpenses.length > 0 && (
                                 <div className="bg-slate-900 dark:bg-slate-950 border-t-4 border-rose-500 px-12 py-8 flex justify-between items-center sticky bottom-0 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
                                     <div className="flex flex-col">
-                                        <span className="text-[10px] font-display-black uppercase text-rose-500 tracking-[0.25em] mb-1">Inversión Ejecutada</span>
-                                        <p className="text-[9px] text-slate-500 font-display-medium uppercase max-w-[200px]">Total de capital amortizado en mano de obra y suministros</p>
+                                        <span className="text-[10px] font-bold uppercase text-rose-500 tracking-[0.25em] mb-1">Inversión Ejecutada</span>
+                                        <p className="text-[9px] text-slate-500 font-medium uppercase max-w-[200px]">Total de capital amortizado en mano de obra y suministros</p>
                                     </div>
                                     <div className="flex items-baseline gap-3">
-                                        <span className="text-4xl font-display-black text-white">${formatNumber(totalExecuted)}</span>
-                                        <span className="text-xs font-display-bold text-rose-500 uppercase">USD TOTAL</span>
+                                        <span className="text-4xl font-bold text-white">${formatNumber(totalExecuted)}</span>
+                                        <span className="text-xs font-bold text-rose-500 uppercase">USD TOTAL</span>
                                     </div>
                                 </div>
                             )}
@@ -1115,33 +1079,30 @@ const SpecialQuotas = () => {
 
             {/* Modal: Nuevo Proyecto - Social VIVO Premium */}
             {showProjectModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
-                        {/* Decorative header blur */}
-                        <div className="absolute top-0 inset-x-0 h-32 bg-emerald-500/10 blur-3xl -z-10"></div>
-
-                        <div className="p-10 border-b border-slate-200 dark:border-slate-800/50">
-                            <div className="flex items-center gap-5 mb-4">
-                                <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-[1.25rem] flex items-center justify-center text-white shadow-xl shadow-emerald-500/20">
-                                    <span className="material-icons text-3xl">rocket_launch</span>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md w-full max-w-md overflow-hidden">
+                        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="w-10 h-10 bg-emerald-600 rounded flex items-center justify-center text-white">
+                                    <span className="material-icons text-xl">rocket_launch</span>
                                 </div>
                                 <div>
-                                    <h3 className="text-3xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">Nueva Iniciativa</h3>
-                                    <p className="text-xs font-display-medium text-emerald-500 uppercase tracking-widest mt-1">Planificación de Capital Torre {selectedTower}</p>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white uppercase">Nueva Iniciativa</h3>
+                                    <p className="text-xs text-emerald-600 uppercase">Planificación de Capital Torre {selectedTower}</p>
                                 </div>
                             </div>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 font-display-medium leading-relaxed">
-                                Formule un nuevo requerimiento presupuestario para la comunidad. Los fondos serán prorrateados según el número de tramos definido.
+                            <p className="text-sm text-slate-500">
+                                Formule un nuevo requerimiento presupuestario para la comunidad.
                             </p>
                         </div>
 
-                        <div className="p-10 space-y-8">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Designación del Proyecto</label>
+                        <div className="p-4 space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase ml-1">Designación del Proyecto</label>
                                 <div className="relative">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-emerald-500 material-icons">assignment</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-500 material-icons">assignment</span>
                                     <input
-                                        className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-bold text-base text-slate-900 dark:text-white transition-all placeholder:text-slate-300"
+                                        className="w-full pl-10 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-none focus:border-emerald-500 font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-400"
                                         placeholder="EJ: MODERNIZACIÓN DE ASCENSORES"
                                         value={newProject.name}
                                         onChange={(e) => setNewProject({ ...newProject, name: e.target.value.toUpperCase() })}
@@ -1149,26 +1110,26 @@ const SpecialQuotas = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Inversión (USD)</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500 uppercase ml-1">Inversión (USD)</label>
                                     <div className="relative">
-                                        <span className="absolute left-5 top-1/2 -translate-y-1/2 font-display-black text-emerald-500">$</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-emerald-600">$</span>
                                         <input
                                             type="number"
-                                            className="w-full pl-10 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-black text-xl text-slate-900 dark:text-white transition-all"
+                                            className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md focus:outline-none focus:border-emerald-500 font-mono font-bold text-base text-slate-900 dark:text-white"
                                             placeholder="0,00"
                                             value={newProject.total_budget}
                                             onChange={(e) => setNewProject({ ...newProject, total_budget: e.target.value })}
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Amortización / Tramos</label>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Amortización / Tramos</label>
                                     <div className="relative">
                                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 material-icons text-sm">segment</span>
                                         <select
-                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
+                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 font-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
                                             value={newProject.installments_count}
                                             onChange={(e) => setNewProject({ ...newProject, installments_count: e.target.value })}
                                         >
@@ -1184,16 +1145,16 @@ const SpecialQuotas = () => {
                             </div>
                         </div>
 
-                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
+                        <div className="p-8 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-4">
                             <button
                                 onClick={() => setShowProjectModal(false)}
-                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
+                                className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md font-bold text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95"
                             >
                                 CANCELAR
                             </button>
                             <button
                                 onClick={handleCreateProject}
-                                className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                                className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md font-bold text-[10px] uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-95"
                             >
                                 LANZAR PROYECTO
                             </button>
@@ -1205,7 +1166,7 @@ const SpecialQuotas = () => {
             {/* Modal: Registrar Pago (Liquidación) - Social VIVO Premium */}
             {showPaymentModal && project && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md w-full max-w-md overflow-hidden">
 
                         <div className="p-10 border-b border-slate-200 dark:border-slate-800/50">
                             <div className="flex items-center justify-between mb-6">
@@ -1214,13 +1175,13 @@ const SpecialQuotas = () => {
                                         <span className="material-icons">receipt_long</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight">Liquidación</h3>
-                                        <p className="text-[10px] font-display-black text-emerald-500 uppercase tracking-widest">Abono a Cuota Especial</p>
+                                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Liquidación</h3>
+                                        <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Abono a Cuota Especial</p>
                                     </div>
                                 </div>
                                 <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                                    <span className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest block leading-none mb-1">Tramo</span>
-                                    <span className="text-sm font-display-black text-slate-900 dark:text-white uppercase">NIVEL {paymentDetails.installment_number}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block leading-none mb-1">Tramo</span>
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white uppercase">NIVEL {paymentDetails.installment_number}</span>
                                 </div>
                             </div>
 
@@ -1229,8 +1190,8 @@ const SpecialQuotas = () => {
                                     <span className="material-icons text-sm">home</span>
                                 </div>
                                 <div className="flex flex-col">
-                                    <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Unidad Beneficiaria</span>
-                                    <span className="text-sm font-display-bold text-slate-900 dark:text-white">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unidad Beneficiaria</span>
+                                    <span className="text-sm font-bold text-slate-900 dark:text-white">
                                         {selectedUnitForPayment ? `U-${selectedUnitForPayment.number} · ${selectedUnitForPayment.owners?.full_name}` : 'Pendiente de Selección'}
                                     </span>
                                 </div>
@@ -1240,19 +1201,19 @@ const SpecialQuotas = () => {
                         <div className="p-10 space-y-8">
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Valor</label>
+                                    <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Valor</label>
                                     <input
                                         type="date"
-                                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all"
+                                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-bold text-sm text-slate-900 dark:text-white transition-all"
                                         value={paymentDetails.payment_date}
                                         onChange={(e) => setPaymentDetails({ ...paymentDetails, payment_date: e.target.value })}
                                     />
                                 </div>
                                 {!selectedUnitForPayment && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Unidad</label>
+                                        <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Unidad</label>
                                         <select
-                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer"
                                             onChange={(e) => setSelectedUnitForPayment(units.find(u => u.id === e.target.value))}
                                         >
                                             <option value="">Seleccionar...</option>
@@ -1262,7 +1223,7 @@ const SpecialQuotas = () => {
                                 )}
                             </div>
 
-                            <div className="flex p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-[1.5rem] border border-slate-200 dark:border-slate-700/30">
+                            <div className="flex p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md">
                                 <button
                                     onClick={() => setPaymentDetails({ ...paymentDetails, payment_method: 'TRANSFER' })}
                                     className={`flex-1 py-4 px-2 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 ${paymentDetails.payment_method === 'TRANSFER'
@@ -1270,7 +1231,7 @@ const SpecialQuotas = () => {
                                         : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 >
                                     <span className="material-icons text-lg">account_balance</span>
-                                    <span className="text-[10px] font-display-black uppercase tracking-widest">Transferencia</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Transferencia</span>
                                 </button>
                                 <button
                                     onClick={() => setPaymentDetails({ ...paymentDetails, payment_method: 'CASH' })}
@@ -1279,7 +1240,7 @@ const SpecialQuotas = () => {
                                         : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
                                 >
                                     <span className="material-icons text-lg">payments</span>
-                                    <span className="text-[10px] font-display-black uppercase tracking-widest">Efectivo</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Efectivo</span>
                                 </button>
                             </div>
 
@@ -1287,11 +1248,11 @@ const SpecialQuotas = () => {
                                 {paymentDetails.payment_method === 'TRANSFER' && (
                                     <div className="grid grid-cols-2 gap-6 p-6 bg-slate-50 dark:bg-slate-950/20 rounded-3xl border border-slate-200 dark:border-slate-800 animate-slide-up">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest ml-2">Monto Bs.</label>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Monto Bs.</label>
                                             <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-display-bold text-xs uppercase">Bs.</span>
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs uppercase">Bs.</span>
                                                 <input
-                                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-black text-xl text-slate-900 dark:text-white"
+                                                    className="w-full pl-12 pr-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-bold text-xl text-slate-900 dark:text-white"
                                                     type="number"
                                                     value={paymentDetails.amount_bs}
                                                     onChange={(e) => {
@@ -1303,11 +1264,11 @@ const SpecialQuotas = () => {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest ml-2">Tasa BCV</label>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Tasa BCV</label>
                                             <div className="relative">
                                                 <input
                                                     type="number"
-                                                    className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-black text-xl text-emerald-600 dark:text-emerald-400"
+                                                    className="w-full px-4 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl focus:outline-none focus:border-emerald-500 font-bold text-xl text-emerald-600 dark:text-emerald-400"
                                                     value={paymentDetails.bcv_rate}
                                                     onChange={(e) => setPaymentDetails({ ...paymentDetails, bcv_rate: e.target.value })}
                                                 />
@@ -1318,13 +1279,13 @@ const SpecialQuotas = () => {
                                 )}
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-emerald-600 dark:text-emerald-400 uppercase ml-2">
+                                    <label className="text-[10px] font-bold tracking-[0.2em] text-emerald-600 dark:text-emerald-400 uppercase ml-2">
                                         {paymentDetails.payment_method === 'CASH' ? 'Importe Recibido (USD)' : 'Convertido a Divisa (USD)'}
                                     </label>
                                     <div className="relative group/input">
-                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-display-black text-2xl text-emerald-500">$</span>
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-2xl text-emerald-500">$</span>
                                         <input
-                                            className={`w-full pl-12 pr-6 py-6 bg-emerald-500/5 border-2 rounded-3xl focus:outline-none font-display-black text-3xl transition-all ${paymentDetails.payment_method === 'CASH' ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-slate-200 dark:border-slate-700'
+                                            className={`w-full pl-12 pr-6 py-6 bg-emerald-500/5 border-2 rounded-3xl focus:outline-none font-bold text-3xl transition-all ${paymentDetails.payment_method === 'CASH' ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-slate-200 dark:border-slate-700'
                                                 } text-emerald-600 dark:text-emerald-400`}
                                             type="number"
                                             value={paymentDetails.amount}
@@ -1335,7 +1296,7 @@ const SpecialQuotas = () => {
 
                                 {paymentDetails.payment_method === 'TRANSFER' && (
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Evidencia de Pago</label>
+                                        <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Evidencia de Pago</label>
                                         <div className="relative group/capture">
                                             <input
                                                 type="file"
@@ -1352,7 +1313,7 @@ const SpecialQuotas = () => {
                                                     <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl">
                                                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                                         <div className="absolute inset-0 bg-emerald-950/40 flex items-center justify-center opacity-0 group-hover/capture:opacity-100 transition-opacity">
-                                                            <span className="text-white text-[10px] font-display-black uppercase tracking-widest">Cambiar Captura</span>
+                                                            <span className="text-white text-[10px] font-bold uppercase tracking-widest">Cambiar Captura</span>
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -1360,7 +1321,7 @@ const SpecialQuotas = () => {
                                                         <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 group-hover/capture:scale-110 transition-transform">
                                                             <span className="material-icons text-xl text-slate-400">upload_file</span>
                                                         </div>
-                                                        <span className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest mt-3">Subir Referencia Visual</span>
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-3">Subir Referencia Visual</span>
                                                     </>
                                                 )}
                                             </label>
@@ -1368,14 +1329,14 @@ const SpecialQuotas = () => {
                                             {ocrProcessing && (
                                                 <div className="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 px-3 py-2 rounded-xl border border-emerald-500/20 shadow-xl flex items-center gap-2 animate-in fade-in zoom-in">
                                                     <div className="w-3 h-3 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
-                                                    <span className="text-[9px] font-display-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">OCR en Proceso</span>
+                                                    <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">OCR en Proceso</span>
                                                 </div>
                                             )}
 
                                             {ocrValidation && !ocrProcessing && (
                                                 <div className={`absolute top-4 right-4 px-3 py-2 rounded-xl shadow-xl flex items-center gap-2 animate-in zoom-in slide-in-from-top-2 border ${ocrValidation.match ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-rose-500 text-white border-rose-400'}`}>
                                                     <span className="material-icons text-sm">{ocrValidation.match ? 'check_circle' : 'error'}</span>
-                                                    <span className="text-[9px] font-display-black uppercase tracking-widest leading-none">
+                                                    <span className="text-[9px] font-bold uppercase tracking-widest leading-none">
                                                         {ocrValidation.match ? 'REF VALIDADA' : 'REF DESCONOCIDA'}
                                                     </span>
                                                 </div>
@@ -1386,16 +1347,16 @@ const SpecialQuotas = () => {
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center ml-2">
-                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase">Referencia / Traza</label>
+                                        <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase">Referencia / Traza</label>
                                         {previewUrl && !ocrProcessing && ocrValidation && (
-                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[8px] font-display-black uppercase tracking-widest animate-in slide-in-from-right-2 ${ocrValidation.match ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[8px] font-bold uppercase tracking-widest animate-in slide-in-from-right-2 ${ocrValidation.match ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                                                 <span className="material-icons text-[10px]">{ocrValidation.match ? 'verified' : 'error'}</span>
                                                 {ocrValidation.match ? 'Validada' : 'No Detectada'}
                                             </div>
                                         )}
                                     </div>
                                     <input
-                                        className={`w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border rounded-2xl focus:outline-none font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300 ${previewUrl && ocrValidation ? (ocrValidation.match ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-rose-500 ring-4 ring-rose-500/10') : 'border-slate-200 dark:border-slate-700/50 focus:border-emerald-500'}`}
+                                        className={`w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border rounded-2xl focus:outline-none font-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300 ${previewUrl && ocrValidation ? (ocrValidation.match ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-rose-500 ring-4 ring-rose-500/10') : 'border-slate-200 dark:border-slate-700/50 focus:border-emerald-500'}`}
                                         placeholder="PAGO MÓVIL / EFECTIVO / OTRO"
                                         value={paymentDetails.reference}
                                         onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value.toUpperCase() })}
@@ -1404,19 +1365,19 @@ const SpecialQuotas = () => {
                             </div>
                         </div>
 
-                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
+                        <div className="p-8 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-4">
                             <button
                                 onClick={() => {
                                     setShowPaymentModal(false);
                                     setSelectedUnitForPayment(null);
                                 }}
-                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
+                                className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md font-bold text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95"
                             >
                                 CANCELAR
                             </button>
                             <button
                                 onClick={handleRegisterPayment}
-                                className="flex-[2] py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                                className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-md font-bold text-[10px] uppercase tracking-[0.2em] shadow-xl hover:opacity-90 transition-all active:scale-95"
                             >
                                 ASENTAR LIQUIDACIÓN
                             </button>
@@ -1427,7 +1388,7 @@ const SpecialQuotas = () => {
             {/* Expense Registration Modal - Social VIVO Premium */}
             {showExpenseModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[2.5rem] w-full max-w-lg shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] overflow-hidden animate-slide-up relative active-premium-card font-display">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md w-full max-w-md overflow-hidden">
 
                         <div className="absolute top-0 inset-x-0 h-32 bg-rose-500/10 blur-3xl -z-10"></div>
 
@@ -1438,10 +1399,10 @@ const SpecialQuotas = () => {
                                         <span className="material-icons">payments</span>
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-display-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">
                                             {editingExpenseId ? 'Editar Egreso' : 'Reportar Egreso'}
                                         </h3>
-                                        <p className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest">Liquidación del Capital Social</p>
+                                        <p className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Liquidación del Capital Social</p>
                                     </div>
                                 </div>
                                 <button onClick={() => {
@@ -1465,11 +1426,11 @@ const SpecialQuotas = () => {
                         <div className="p-10 space-y-8">
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Descripción / Concepto</label>
+                                    <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Descripción / Concepto</label>
                                     <div className="relative">
                                         <span className="absolute left-5 top-1/2 -translate-y-1/2 text-rose-500 material-icons">description</span>
                                         <input
-                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all placeholder:text-slate-300"
+                                            className="w-full pl-14 pr-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-bold text-sm text-slate-900 dark:text-white transition-all placeholder:text-slate-300"
                                             placeholder="EJ: COMPRA DE MATERIALES DE PINTURA"
                                             value={newExpense.description}
                                             onChange={(e) => setNewExpense({ ...newExpense, description: e.target.value.toUpperCase() })}
@@ -1479,9 +1440,9 @@ const SpecialQuotas = () => {
 
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Categoría</label>
+                                        <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Categoría</label>
                                         <select
-                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer uppercase"
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-bold text-sm text-slate-900 dark:text-white transition-all appearance-none cursor-pointer uppercase"
                                             value={newExpense.category}
                                             onChange={(e) => setNewExpense({ ...newExpense, category: e.target.value })}
                                         >
@@ -1491,9 +1452,9 @@ const SpecialQuotas = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Compra</label>
+                                        <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Fecha Compra</label>
                                         <input
-                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all"
+                                            className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-bold text-sm text-slate-900 dark:text-white transition-all"
                                             type="date"
                                             value={newExpense.date}
                                             onChange={(e) => setNewExpense({ ...newExpense, date: e.target.value })}
@@ -1504,11 +1465,11 @@ const SpecialQuotas = () => {
 
                             <div className="p-8 bg-rose-500/5 rounded-3xl border border-rose-500/10 space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black text-rose-500 uppercase tracking-widest ml-2">Monto Ejecutado (Bs.)</label>
+                                    <label className="text-[10px] font-bold text-rose-500 uppercase tracking-widest ml-2">Monto Ejecutado (Bs.)</label>
                                     <div className="relative">
-                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-display-black text-rose-500">Bs.</span>
+                                        <span className="absolute left-6 top-1/2 -translate-y-1/2 font-bold text-rose-500">Bs.</span>
                                         <input
-                                            className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-900 border border-rose-500/20 rounded-2xl focus:outline-none focus:border-rose-500 font-display-black text-2xl text-slate-900 dark:text-white shadow-xl shadow-rose-500/5"
+                                            className="w-full pl-16 pr-6 py-5 bg-white dark:bg-slate-900 border border-rose-500/20 rounded-2xl focus:outline-none focus:border-rose-500 font-bold text-2xl text-slate-900 dark:text-white shadow-xl shadow-rose-500/5"
                                             type="number"
                                             placeholder="0,00"
                                             value={newExpense.amount_bs}
@@ -1523,17 +1484,17 @@ const SpecialQuotas = () => {
 
                                 <div className="flex justify-between items-center p-4 bg-white/40 dark:bg-slate-800/40 rounded-2xl border border-white/20">
                                     <div className="flex flex-col">
-                                        <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Equivalencia Final</span>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Equivalencia Final</span>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-2xl font-display-black text-emerald-600 dark:text-emerald-400">
+                                            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                                                 {newExpense.amount_usd ? `$${formatNumber(parseFloat(newExpense.amount_usd))}` : '—'}
                                             </span>
                                             {loadingExpenseRate && <span className="material-icons text-xs animate-spin text-emerald-500">sync</span>}
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-[9px] font-display-black text-slate-400 uppercase tracking-widest">Tasa BCV Aplicada</span>
-                                        <p className="font-display-bold text-sm text-slate-700 dark:text-slate-300">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Tasa BCV Aplicada</span>
+                                        <p className="font-bold text-sm text-slate-700 dark:text-slate-300">
                                             {newExpense.bcv_rate > 0 ? `Bs. ${formatNumber(newExpense.bcv_rate)}` : '...'}
                                         </p>
                                     </div>
@@ -1541,9 +1502,9 @@ const SpecialQuotas = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Garantía / PDF / Factura</label>
+                                <label className="text-[10px] font-bold tracking-[0.2em] text-slate-400 uppercase ml-2">Garantía / PDF / Factura</label>
                                 <input
-                                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300"
+                                    className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-rose-500 font-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300"
                                     placeholder="NRO FACTURA O REFERENCIA PAGO"
                                     value={newExpense.reference}
                                     onChange={(e) => setNewExpense({ ...newExpense, reference: e.target.value.toUpperCase() })}
@@ -1551,7 +1512,7 @@ const SpecialQuotas = () => {
                             </div>
                         </div>
 
-                        <div className="p-8 bg-slate-50/50 dark:bg-slate-950/20 border-t border-slate-200 dark:border-slate-800/50 flex gap-4">
+                        <div className="p-8 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex gap-4">
                             <button
                                 onClick={() => {
                                     setShowExpenseModal(false);
@@ -1566,13 +1527,13 @@ const SpecialQuotas = () => {
                                         reference: ''
                                     });
                                 }}
-                                className="flex-1 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-display-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-slate-900/20 transition-all active:scale-95"
+                                className="flex-1 py-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md font-bold text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95"
                             >
                                 CANCELAR
                             </button>
                             <button
                                 onClick={handleRegisterExpense}
-                                className="flex-[2] py-4 bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
+                                className="flex-[2] py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-md font-bold text-[10px] uppercase tracking-[0.2em] shadow-xl transition-all active:scale-95"
                             >
                                 {editingExpenseId ? 'GUARDAR CAMBIOS' : 'REGISTRAR EGRESO'}
                             </button>
@@ -1586,7 +1547,7 @@ const SpecialQuotas = () => {
                 <div className="mt-8">
                     <div className="flex items-center gap-3 mb-6">
                         <span className="material-icons text-slate-400 text-2xl">history</span>
-                        <h2 className="text-xl font-display-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+                        <h2 className="text-xl font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tight">
                             Historial de Proyectos Cerrados
                         </h2>
                         <span className="px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold">{closedProjects.length}</span>
@@ -1621,14 +1582,14 @@ const SpecialQuotas = () => {
                                                 <span className="material-icons text-slate-400">folder_zip</span>
                                             </div>
                                             <div>
-                                                <p className="font-display-black text-slate-800 dark:text-white text-base uppercase tracking-tight">{cp.name}</p>
+                                                <p className="font-bold text-slate-800 dark:text-white text-base uppercase tracking-tight">{cp.name}</p>
                                                 <p className="text-[11px] text-slate-400 font-mono mt-0.5">Torre {cp.tower_id} · Iniciado: {createdDate} · Cerrado: {closedDate}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-6">
                                             <div className="text-right hidden md:block">
                                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest">Presupuesto</p>
-                                                <p className="font-display-black text-slate-800 dark:text-white text-lg">$ {formatNumber(cp.total_budget)}</p>
+                                                <p className="font-bold text-slate-800 dark:text-white text-lg">$ {formatNumber(cp.total_budget)}</p>
                                             </div>
                                             <div className="w-20 hidden md:block">
                                                 <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -1653,7 +1614,7 @@ const SpecialQuotas = () => {
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                                     {/* Resumen Financiero */}
                                                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
-                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Resumen Financiero</h4>
+                                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Resumen Financiero</h4>
                                                         <div className="space-y-3">
                                                             <div className="flex justify-between text-sm">
                                                                 <span className="text-slate-500">Presupuesto total</span>
@@ -1677,7 +1638,7 @@ const SpecialQuotas = () => {
                                                     </div>
                                                     {/* Pagos */}
                                                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
-                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Pagos Registrados ({hPays.length})</h4>
+                                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Pagos Registrados ({hPays.length})</h4>
                                                         <div className="space-y-2 max-h-48 overflow-y-auto">
                                                             {hPays.length === 0 ? (
                                                                 <p className="text-slate-400 text-sm text-center py-4">Sin pagos registrados</p>
@@ -1694,7 +1655,7 @@ const SpecialQuotas = () => {
                                                     </div>
                                                     {/* Gastos */}
                                                     <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
-                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Egresos del Proyecto ({hExps.length})</h4>
+                                                        <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-4">Egresos del Proyecto ({hExps.length})</h4>
                                                         <div className="space-y-2 max-h-56 overflow-y-auto">
                                                             {hExps.length === 0 ? (
                                                                 <p className="text-slate-400 text-sm text-center py-4">Sin egresos registrados</p>
@@ -1729,12 +1690,12 @@ const SpecialQuotas = () => {
                                 <span className="material-icons text-amber-500">archive</span>
                             </div>
                             <div>
-                                <h3 className="text-xl font-display-black text-slate-900 dark:text-white">Cerrar Proyecto</h3>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">Cerrar Proyecto</h3>
                                 <p className="text-xs text-slate-400">Esta acción no se puede deshacer</p>
                             </div>
                         </div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">¿Confirmas el cierre del proyecto:</p>
-                        <p className="text-base font-display-black text-slate-900 dark:text-white mb-1 uppercase">{project?.name}</p>
+                        <p className="text-base font-bold text-slate-900 dark:text-white mb-1 uppercase">{project?.name}</p>
                         <p className="text-xs text-slate-400 mb-6">Torre {selectedTower} · Presupuesto: $ {formatNumber(project?.total_budget || 0)}</p>
                         <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-xl p-3 mb-6">
                             ⚠️ El proyecto quedará archivado en el historial y podrás consultar sus datos en modo lectura. Podrás iniciar un nuevo proyecto cuando lo necesites.
@@ -1742,14 +1703,14 @@ const SpecialQuotas = () => {
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setShowCloseConfirmModal(false)}
-                                className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-display-black text-xs uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                                className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold text-xs uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
                             >
                                 Cancelar
                             </button>
                             <button
                                 onClick={handleCloseProject}
                                 disabled={isMutating}
-                                className="flex-[2] py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-display-black text-xs uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="flex-[2] py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                             >
                                 <span className="material-icons text-sm">archive</span>
                                 {isMutating ? 'Archivando...' : 'Confirmar Cierre'}
