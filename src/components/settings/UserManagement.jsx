@@ -15,6 +15,7 @@ const MODULES = [
     { key: 'alicuotas', label: 'Configuración de Alícuotas' },
     { key: 'cuotas_especiales', label: 'Cuotas Especiales' },
     { key: 'propietarios', label: 'Directorio de Propietarios' },
+    { key: 'portal_propietario', label: 'Vista Propietario' },
 ];
 
 const UserManagement = () => {
@@ -25,6 +26,7 @@ const UserManagement = () => {
     const [userPermissions, setUserPermissions] = useState([]);
     const [saving, setSaving] = useState(false);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [userToEdit, setUserToEdit] = useState(null);
 
     useEffect(() => {
         fetchUsers();
@@ -45,6 +47,45 @@ const UserManagement = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteUser = async (user) => {
+        if (!window.confirm(`¿Estás seguro de que deseas eliminar al usuario ${user.full_name}? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const { error } = await supabase
+                .from('user_profiles')
+                .delete()
+                .eq('id', user.id);
+
+            if (error) throw error;
+            
+            // Nota: Borrar de Auth requiere privilegios de admin/service_role
+            // Por ahora solo borramos el perfil. El usuario no podrá loguearse si el perfil no existe
+            // o si implementamos validación de perfil en el login.
+
+            alert('Usuario eliminado correctamente');
+            fetchUsers();
+            if (selectedUser?.id === user.id) setSelectedUser(null);
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Error al eliminar usuario: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditUser = (user) => {
+        setUserToEdit(user);
+        setIsCreateModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsCreateModalOpen(false);
+        setUserToEdit(null);
     };
 
     const fetchUserPermissions = async (userId) => {
@@ -152,7 +193,10 @@ const UserManagement = () => {
                             Usuarios
                         </h3>
                         <button
-                            onClick={() => setIsCreateModalOpen(true)}
+                            onClick={() => {
+                                setUserToEdit(null);
+                                setIsCreateModalOpen(true);
+                            }}
                             className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 flex items-center justify-center"
                             title="Nuevo Usuario"
                         >
@@ -188,7 +232,29 @@ const UserManagement = () => {
                                             {user.email}
                                         </p>
                                     </div>
-                                    <span className={`material-icons text-sm transition-all ${selectedUser?.id === user.id ? 'text-emerald-500 translate-x-1' : 'text-slate-300 opacity-0 group-hover:opacity-100'}`}>chevron_right</span>
+<div className={`flex items-center gap-2 transition-all ${selectedUser?.id === user.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditUser(user);
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                                            title="Editar Perfil"
+                                        >
+                                            <span className="material-icons text-sm">edit</span>
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteUser(user);
+                                            }}
+                                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                            title="Eliminar Usuario"
+                                        >
+                                            <span className="material-icons text-sm">delete</span>
+                                        </button>
+                                        <span className={`material-icons text-sm transition-all ${selectedUser?.id === user.id ? 'text-emerald-500 translate-x-1' : 'text-slate-300'}`}>chevron_right</span>
+                                    </div>
                                 </button>
                             ))
                         )}
@@ -219,6 +285,8 @@ const UserManagement = () => {
                                 >
                                     <option value="VISOR">VISOR (Solo Lectura)</option>
                                     <option value="OPERADOR">OPERADOR (Gestión)</option>
+                                    <option value="REPRESENTANTE">REPRESENTANTE (Comité/Torre)</option>
+                                    <option value="PROPIETARIO">PROPIETARIO (Portal)</option>
                                     <option value="MASTER">MASTER (Total)</option>
                                 </select>
                             </div>
@@ -297,8 +365,9 @@ const UserManagement = () => {
 
             <CreateUserModal
                 isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
+                onClose={handleCloseModal}
                 onSuccess={fetchUsers}
+                editUser={userToEdit}
             />
         </div>
     );

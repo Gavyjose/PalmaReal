@@ -4,7 +4,7 @@
 --    (Maneja fines de semana y feriados buscando la última tasa registrada antes de la fecha)
 CREATE OR REPLACE FUNCTION get_bcv_rate(p_date DATE DEFAULT CURRENT_DATE)
 RETURNS DECIMAL AS $$
-    SELECT rate_value
+    SELECT ROUND(rate_value, 2)
     FROM exchange_rates
     WHERE rate_date <= p_date
       AND provider = 'BCV'

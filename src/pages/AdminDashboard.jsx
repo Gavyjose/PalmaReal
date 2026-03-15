@@ -7,6 +7,7 @@ import {
     AreaChart, Area, PieChart, Pie, Cell, LineChart, Line
 } from 'recharts';
 import useSWR from 'swr';
+import { useAuth } from '../context/AuthContext';
 import { sortUnits } from '../utils/unitSort';
 
 // Map for sorting months
@@ -61,6 +62,7 @@ const fetchCurrentBcvRate = async () => {
 };
 
 const AdminDashboard = () => {
+    const { userRole } = useAuth();
     const { activeTowers, lastSelectedTower, setLastSelectedTower } = useTowers();
     const [selectedTower, setSelectedTower] = useState(lastSelectedTower || (activeTowers[0]?.name || 'Todas las Torres'));
     const [viewMode, setViewMode] = useState('general'); // 'general' or 'individual'
@@ -542,15 +544,17 @@ const AdminDashboard = () => {
                             <p className="text-slate-400 font-bold text-sm max-w-sm leading-relaxed">
                                 Ejecuta proyecciones de flujo inteligente para el mes de {data?.periods?.[0]?.period_name.split(' ')[1] || 'siguiente período'} basadas en patrones de pago históricos.
                             </p>
-                            <div className="flex gap-4 pt-4">
-                                <button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-10 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center gap-3 shadow-2xl shadow-emerald-600/30 active:scale-95">
-                                    Simular Proyección
-                                    <span className="material-icons text-sm">rocket_launch</span>
-                                </button>
-                                <button className="px-8 py-5 rounded-3xl border border-slate-700 text-slate-300 font-black uppercase tracking-[0.1em] text-[10px] hover:bg-slate-800 transition-all active:scale-95">
-                                    Auditar Datos
-                                </button>
-                            </div>
+                            {userRole !== 'VISOR' && (
+                                <div className="flex gap-4 pt-4">
+                                    <button className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-10 py-5 rounded-3xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center gap-3 shadow-2xl shadow-emerald-600/30 active:scale-95">
+                                        Simular Proyección
+                                        <span className="material-icons text-sm">rocket_launch</span>
+                                    </button>
+                                    <button className="px-8 py-5 rounded-3xl border border-slate-700 text-slate-300 font-black uppercase tracking-[0.1em] text-[10px] hover:bg-slate-800 transition-all active:scale-95">
+                                        Auditar Datos
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         <div className="hidden md:flex flex-1 justify-end">
                             <div className="w-56 h-56 rounded-[3rem] bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 p-8 flex flex-col justify-between relative shadow-2xl skew-x-3 -rotate-3 transition-transform group-hover:rotate-0">

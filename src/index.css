@@ -6,21 +6,103 @@
   --font-display: "Montserrat", sans-serif;
   --font-sans: "Inter", sans-serif;
 
+  /* Jade Emerald - Premium Palette */
   --color-primary: #059669;
-  /* Jade Emerald */
+  --color-primary-light: #10b981;
+  --color-primary-dark: #047857;
   --color-primary-foreground: #ffffff;
 
   --color-secondary: #0d9488;
-  /* Teal */
   --color-accent: #0f766e;
-  /* Dark Teal */
 
+  /* Industrial Design Tokens */
   --color-background-light: #f8fafc;
   --color-background-dark: #0f172a;
+  
+  --color-glass-light: rgba(255, 255, 255, 0.4);
+  --color-glass-dark: rgba(15, 23, 42, 0.4);
 
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-2xl: 32px;
+  --radius-3xl: 48px;
+
+  /* Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse-soft {
+  0% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+  100% { opacity: 0.8; transform: scale(1); }
+}
+
+@utility font-display-medium {
+  font-family: var(--font-display);
+  font-weight: 500;
+}
+
+@utility font-display-bold {
+  font-family: var(--font-display);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+@utility font-display-black {
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+@utility glass-premium {
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, var(--color-glass-light), rgba(255, 255, 255, 0.1));
+}
+
+@utility text-micro {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-family: var(--font-display);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+@utility active-premium-card {
+  transition: all 500ms;
+}
+
+@utility bg-overlay {
+  background: linear-gradient(to bottom, rgba(16, 22, 34, 0.7), rgba(16, 22, 34, 0.95));
+}
+
+@utility social-card {
+  border-radius: 2rem;
+  transition: all 500ms;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@utility avatar-ring {
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+@utility gradient-text {
+  background-clip: text;
+  color: transparent;
+  background-image: linear-gradient(to bottom right, #10b981, #059669, #0f766e);
+}
+
+@utility emerald-gradient {
+  background-image: linear-gradient(to bottom right, #10b981, #0d9488);
+  box-shadow: 0 10px 15px -3px rgba(5, 150, 105, 0.2);
 }
 
 :root {
@@ -35,50 +117,22 @@
   color-scheme: dark;
 }
 
-@layer utilities {
-  .bg-overlay {
-    background: linear-gradient(to bottom, rgba(16, 22, 34, 0.7), rgba(16, 22, 34, 0.95));
-  }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
 
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 0px;
+}
 
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 0px;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-  }
-
-  .social-card {
-    @apply bg-white dark:bg-slate-800 rounded-[2rem] shadow-xl hover:shadow-2xl transition-all duration-500 border border-slate-100 dark:border-slate-700/50 hover:-translate-y-1;
-  }
-
-  .font-display-bold {
-    font-family: var(--font-display);
-    font-weight: 850;
-    letter-spacing: -0.04em;
-  }
-
-  .avatar-ring {
-    @apply ring-4 ring-white dark:ring-slate-800 shadow-xl;
-  }
-
-  .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700;
-  }
-
-  .emerald-gradient {
-    @apply bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/20;
-  }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 @layer base {
@@ -94,101 +148,21 @@
   }
 }
 
-/* Estilos para Impresión */
+/* Estilos para Impresión - Versión Simplificada para evitar duplicación */
 @media print {
-
-  /* Ocultar elementos que no deben imprimirse */
-  .no-print,
-  nav,
-  aside,
-  header,
-  .sidebar,
-  .header-app {
+  .no-print {
     display: none !important;
   }
 
-  /* Asegurar que el reporte y sus padres sean visibles */
-  body,
-  html {
+  body {
     background: white !important;
     color: black !important;
-    height: auto !important;
-    overflow: visible !important;
   }
 
-  /* Si el reporte está presente, intentamos ocultar otros hijos directos del body/root */
-  #root> :not(:has(#printable-report)) {
-    display: none !important;
-  }
-
-  /* Ajustes específicos para el contenedor del reporte */
+  /* Asegurar que el reporte ocupe el ancho total */
   #printable-report {
-    visibility: visible !important;
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 1cm !important;
-    /* Reducido para ganar espacio */
-    border: none !important;
-    background: white !important;
-    color: black !important;
-    box-shadow: none !important;
-  }
-
-  /* Forzar que todo el texto sea negro y visible */
-  #printable-report * {
-    visibility: visible !important;
-    color: black !important;
-    background-color: transparent !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    line-height: 1.15 !important;
-    /* Interlineado compacto */
-    font-size: 9.5pt !important;
-    /* Fuente base más pequeña */
-  }
-
-  /* Títulos un poco más grandes pero controlados */
-  #printable-report h1 {
-    font-size: 16pt !important;
-  }
-
-  #printable-report h2 {
-    font-size: 14pt !important;
-  }
-
-  #printable-report h3 {
-    font-size: 12pt !important;
-  }
-
-  #printable-report h4 {
-    font-size: 10pt !important;
-  }
-
-  /* Estilos específicos para tablas en impresión */
-  table {
-    border-collapse: collapse !important;
-    width: 100% !important;
-    margin-bottom: 0.5cm !important;
-  }
-
-  th,
-  td {
-    border: 1px solid #e2e8f0 !important;
-    color: black !important;
-    padding: 3px 6px !important;
-    /* Celdas muy compactas */
-  }
-
-  .bg-primary {
-    background-color: #135bec !important;
-    color: white !important;
-  }
-
-  .text-primary {
-    color: #135bec !important;
+    padding: 0 !important;
   }
 }

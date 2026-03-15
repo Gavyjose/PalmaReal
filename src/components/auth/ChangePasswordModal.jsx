@@ -7,6 +7,8 @@ const ChangePasswordModal = ({ isOpen, userEmail }) => {
         newPassword: '',
         confirmPassword: ''
     });
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
@@ -67,26 +69,48 @@ const ChangePasswordModal = ({ isOpen, userEmail }) => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
                         <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest px-1">Nueva Contraseña</label>
-                        <input
-                            required
-                            type="password"
-                            value={formData.newPassword}
-                            onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
-                            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-5 py-4 text-sm font-display-medium focus:ring-2 focus:ring-emerald-500 transition-all"
-                            placeholder="Mínimo 6 caracteres"
-                        />
+                        <div className="relative group">
+                            <input
+                                required
+                                type={showPassword ? "text" : "password"}
+                                value={formData.newPassword}
+                                onChange={(e) => setFormData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-5 pr-12 py-4 text-sm font-display-medium focus:ring-2 focus:ring-emerald-500 transition-all normal-case"
+                                placeholder="Mínimo 6 caracteres"
+                            />
+                            <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                <span className="material-icons text-slate-500 hover:text-emerald-500 text-lg transition-colors">
+                                    {showPassword ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-2">
                         <label className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest px-1">Confirmar Contraseña</label>
-                        <input
-                            required
-                            type="password"
-                            value={formData.confirmPassword}
-                            onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                            className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-5 py-4 text-sm font-display-medium focus:ring-2 focus:ring-emerald-500 transition-all"
-                            placeholder="Repite tu clave"
-                        />
+                        <div className="relative group">
+                            <input
+                                required
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={formData.confirmPassword}
+                                onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border-none rounded-2xl px-5 pr-12 py-4 text-sm font-display-medium focus:ring-2 focus:ring-emerald-500 transition-all normal-case"
+                                placeholder="Repite tu clave"
+                            />
+                            <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            >
+                                <span className="material-icons text-slate-500 hover:text-emerald-500 text-lg transition-colors">
+                                    {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     {error && (

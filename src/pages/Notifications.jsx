@@ -5,6 +5,7 @@ const Notifications = () => {
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
 
     // Form State
     const [title, setTitle] = useState('');
@@ -58,6 +59,28 @@ const Notifications = () => {
             console.error('Error creating announcement:', error);
         } finally {
             setCreating(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este comunicado permanente?')) return;
+        
+        try {
+            setDeletingId(id);
+            const { error } = await supabase
+                .from('announcements')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            
+            // Refrescar el estado local
+            setAnnouncements(prev => prev.filter(a => a.id !== id));
+        } catch (error) {
+            console.error('Error al eliminar comunicado:', error);
+            alert('Hubo un error al eliminar el comunicado. Verifique los permisos de conexión.');
+        } finally {
+            setDeletingId(null);
         }
     };
 
@@ -191,8 +214,22 @@ const Notifications = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[9px] font-black uppercase tracking-[0.15em] shadow-lg">
-                                            Oficial
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[9px] font-black uppercase tracking-[0.15em] shadow-lg">
+                                                Oficial
+                                            </div>
+                                            <button 
+                                                onClick={() => handleDelete(item.id)}
+                                                disabled={deletingId === item.id}
+                                                className="w-8 h-8 rounded-full bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20 active:scale-95 transition-all flex items-center justify-center shadow-sm disabled:opacity-50"
+                                                title="Eliminar comunicado"
+                                            >
+                                                {deletingId === item.id ? (
+                                                    <span className="material-icons animate-spin text-[16px]">hourglass_empty</span>
+                                                ) : (
+                                                    <span className="material-icons text-[16px]">delete_outline</span>
+                                                )}
+                                            </button>
                                         </div>
                                     </div>
 

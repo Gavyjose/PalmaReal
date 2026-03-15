@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabase';
+import { useAuth } from '../context/AuthContext';
 
 const Owners = () => {
+    const { userRole } = useAuth();
     const [owners, setOwners] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -11,10 +13,13 @@ const Owners = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
-        full_name: '',
+        first_name: '',
+        last_name: '',
+        full_name: '', // Mantener para compatibilidad en tabla
         email: '',
         phone: '',
-        doc_id: ''
+        doc_id: '',
+        enable_portal: false
     });
     const [saving, setSaving] = useState(false);
 
@@ -44,31 +49,140 @@ const Owners = () => {
 
     const handleSaveOwner = async (e) => {
         e.preventDefault();
-        if (!formData.full_name) return;
+        console.log("1. Iniciando handleSaveOwner");
+        if (!formData.full_name) {
+            console.log("Error: Nombre vacío");
+            return;
+        }
 
         try {
+            console.log("2. Estableciendo saving = true");
             setSaving(true);
-            console.log('🔍 DEBUG Save Owner - Editing ID:', editingId);
-            console.log('🔍 DEBUG Save Owner - Form Data:', formData);
+            let ownerId = editingId;
+            const computedFullName = `${formData.first_name.trim()} ${formData.last_name.trim()}`.trim();
+            const ownerPayload = {
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                full_name: computedFullName,
+                email: formData.email,
+                phone: formData.phone,
+                doc_id: formData.doc_id,
+                enable_portal: formData.enable_portal
+            };
 
             if (editingId) {
-                const { data, error } = await supabase
+                console.log("3a. Actualizando owner existente. ID:", editingId);
+                const { error } = await supabase
                     .from('owners')
-                    .update(formData)
-                    .eq('id', editingId)
-                    .select();
-
-                console.log('🔍 DEBUG Save Owner - Update Response:', { data, error });
+                    .update(ownerPayload)
+                    .eq('id', editingId);
                 if (error) throw error;
+                console.log("4a. Update exitoso");
             } else {
+                console.log("3b. Insertando nuevo owner");
                 const { data, error } = await supabase
                     .from('owners')
-                    .insert([formData])
-                    .select();
-
-                console.log('🔍 DEBUG Save Owner - Insert Response:', { data, error });
+                    .insert([ownerPayload])
+                    .select()
+                    .single();
                 if (error) throw error;
+                ownerId = data.id;
+                console.log("4b. Insert exitoso. ID:", ownerId);
             }
+            // 2. Gestionar Acceso Digital Automático
+            console.log("5. Evaluando creación de usuario Auth. enable_portal:", formData.enable_portal);
+            
+            if (formData.enable_portal) {
+                // Validación estricta para Acceso Digital
+                if (!formData.email || !formData.doc_id) {
+                    console.warn("⚠️ Acceso Digital activado pero falta Email o Cédula. Omitiendo creación de usuario.");
+                    alert("Para activar el Acceso Digital, el residente debe tener un Correo Electrónico y una Cédula registrados.");
+                    return; // Detener aquí para que el usuario corrija
+                }
+
+                const numericPassword = formData.doc_id.replace(/\D/g, '');
+                console.log("6. Preparando registro Auth. Email:", formData.email, "Pass (numérica):", numericPassword);
+
+                if (numericPassword.length < 6) {
+                    console.warn("⚠️ La cédula tiene menos de 6 números, es posible que el registro falle por requisitos de password.");
+                }
+
+                const firstName = formData.first_name.trim();
+                const lastName = formData.last_name.trim();
+                const fullName = `${firstName} ${lastName}`.trim();
+
+                console.log("7. Ejecutando signUp...");
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: formData.email,
+                    password: numericPassword,
+                    options: {
+                        data: {
+                            first_name: firstName,
+                            last_name: lastName,
+                            full_name: fullName,
+                            email: formData.email,
+                            id_card: formData.doc_id,
+                            phone: formData.phone,
+                            role: 'PROPIETARIO',
+                            owner_id: ownerId,
+                            must_change_password: true
+                        }
+                    }
+                });
+                console.log("8. Resultado signUp:", { success: !!authData?.user, alreadyReg: authError?.message?.includes('already registered'), error: authError });
+
+                // Lógica de Sincronización de Perfil
+                if ((authData?.user || (authError && authError.message.includes('already registered'))) && formData.email) {
+                    let userId = authData?.user?.id;
+
+                    if (!userId) {
+                        console.log("9. Usuario ya en Auth, intentando localizar perfil por email:", formData.email);
+                        const { data: profileCheck } = await supabase
+                            .from('user_profiles')
+                            .select('id')
+                            .eq('email', formData.email)
+                            .single();
+                        userId = profileCheck?.id;
+                    }
+
+                    if (userId) {
+                        console.log("10. Ejecutando upsert en user_profiles para ID:", userId);
+                        const { error: profileError } = await supabase
+                            .from('user_profiles')
+                            .upsert({
+                                id: userId,
+                                first_name: firstName,
+                                last_name: lastName,
+                                full_name: fullName,
+                                email: formData.email,
+                                id_card: formData.doc_id,
+                                phone: formData.phone,
+                                role: 'PROPIETARIO',
+                                owner_id: ownerId,
+                                must_change_password: true,
+                                updated_at: new Date().toISOString()
+                            }, { onConflict: 'id' });
+                        
+                        if (profileError) {
+                            console.error("❌ Error en upsert de perfil:", profileError);
+                            alert(`Error al crear el perfil de acceso: ${profileError.message}`);
+                        } else {
+                            console.log("11. Perfil sincronizado correctamente.");
+                        }
+                    } else {
+                        console.warn("⚠️ No se pudo determinar el ID de Auth. El usuario existe pero no tiene perfil y no podemos obtener su UUID sin sesión.");
+                        alert("El usuario ya existe en el sistema de autenticación pero no tiene un perfil vinculado. Intenta crearlo manualmente en Configuración > Usuarios.");
+                    }
+                }
+
+                if (authError && !authError.message.includes('already registered')) {
+                    throw authError;
+                }
+            } else {
+                console.log("12. Saltando SignUp. Condiciones no cumplidas o portal desactivado.");
+            }
+
+            console.log("13. Cerrando modal y actualizando tabla");
             setShowModal(false);
             resetForm();
             fetchOwners();
@@ -76,6 +190,7 @@ const Owners = () => {
             console.error('❌ Error saving owner:', error);
             alert('Error al guardar el propietario: ' + error.message);
         } finally {
+            console.log("14. Finalizando saving = false");
             setSaving(false);
         }
     };
@@ -100,17 +215,20 @@ const Owners = () => {
     const handleEdit = (owner) => {
         setEditingId(owner.id);
         setFormData({
-            full_name: owner.full_name,
+            first_name: owner.first_name || (owner.full_name ? owner.full_name.split(' ')[0] : ''),
+            last_name: owner.last_name || (owner.full_name ? owner.full_name.split(' ').slice(1).join(' ') : ''),
+            full_name: owner.full_name || '',
             email: owner.email || '',
             phone: owner.phone || '',
-            doc_id: owner.doc_id || ''
+            doc_id: owner.doc_id || '',
+            enable_portal: owner.enable_portal || false
         });
         setShowModal(true);
     };
 
     const resetForm = () => {
         setEditingId(null);
-        setFormData({ full_name: '', email: '', phone: '', doc_id: '' });
+        setFormData({ first_name: '', last_name: '', full_name: '', email: '', phone: '', doc_id: '', enable_portal: false });
     };
 
     const filteredOwners = owners.filter(owner =>
@@ -143,13 +261,15 @@ const Owners = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => { resetForm(); setShowModal(true); }}
-                            className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
-                        >
-                            <span className="material-icons text-lg">person_add</span>
-                            <span>Nuevo Propietario</span>
-                        </button>
+                        {userRole !== 'VISOR' && (
+                            <button
+                                onClick={() => { resetForm(); setShowModal(true); }}
+                                className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
+                            >
+                                <span className="material-icons text-lg">person_add</span>
+                                <span>Nuevo Propietario</span>
+                            </button>
+                        )}
                     </div>
                 </div>
                 {/* Decorative background element */}
@@ -261,21 +381,29 @@ const Owners = () => {
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6 text-right">
-                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover/row:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEdit(owner)}
-                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-white/5 border border-white/10 shadow-lg text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transform hover:-translate-y-1"
-                                                        title="Editar Perfil"
-                                                    >
-                                                        <span className="material-icons text-lg">edit</span>
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteOwner(owner.id)}
-                                                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-white/5 border border-white/10 shadow-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all transform hover:-translate-y-1"
-                                                        title="Revocar Acceso"
-                                                    >
-                                                        <span className="material-icons text-lg">delete_sweep</span>
-                                                    </button>
+                                                <div className="flex items-center justify-end gap-2 px-4 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                                                    {userRole !== 'VISOR' ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleEdit(owner)}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-white/5 border border-white/10 shadow-lg text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all transform hover:-translate-y-1"
+                                                                title="Editar Perfil"
+                                                            >
+                                                                <span className="material-icons text-lg">edit</span>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteOwner(owner.id)}
+                                                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-white/5 border border-white/10 shadow-lg text-rose-500 hover:bg-rose-500 hover:text-white transition-all transform hover:-translate-y-1"
+                                                                title="Revocar Acceso"
+                                                            >
+                                                                <span className="material-icons text-lg">delete_sweep</span>
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-white/5 text-slate-300">
+                                                            <span className="material-icons text-lg">lock</span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -312,62 +440,102 @@ const Owners = () => {
 
                             <form onSubmit={handleSaveOwner} className="space-y-8">
                                 <div className="space-y-6">
-                                    <div className="group/field">
-                                        <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Nombre Legal del Propietario</label>
-                                        <div className="relative">
-                                            <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">person</span>
-                                            <input
-                                                type="text"
-                                                required
-                                                className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-wide text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
-                                                placeholder="EJ. ALEJANDRO RODRÍGUEZ"
-                                                value={formData.full_name}
-                                                onChange={(e) => setFormData({ ...formData, full_name: e.target.value.toUpperCase() })}
-                                            />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="group/field">
+                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Nombres</label>
+                                            <div className="relative">
+                                                <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">person</span>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-wide text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
+                                                    placeholder="EJ. JUAN"
+                                                    value={formData.first_name}
+                                                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value.toUpperCase() })}
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div className="group/field">
-                                        <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Documento de Identificación (C.I / RIF)</label>
-                                        <div className="relative">
-                                            <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">badge</span>
-                                            <input
-                                                type="text"
-                                                className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-widest text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
-                                                placeholder="V-00.000.000"
-                                                value={formData.doc_id}
-                                                onChange={(e) => setFormData({ ...formData, doc_id: e.target.value.toUpperCase() })}
-                                            />
+                                        <div className="group/field">
+                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Apellidos</label>
+                                            <div className="relative">
+                                                <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">person_outline</span>
+                                                <input
+                                                    type="text"
+                                                    required
+                                                    className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-wide text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
+                                                    placeholder="EJ. PÉREZ"
+                                                    value={formData.last_name}
+                                                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value.toUpperCase() })}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="group/field">
-                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Correo Electrónico</label>
+                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Cédula / RIF</label>
                                             <div className="relative">
-                                                <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">alternate_email</span>
+                                                <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">badge</span>
                                                 <input
-                                                    type="email"
-                                                    className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-medium text-sm text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
-                                                    placeholder="usuario@email.com"
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    type="text"
+                                                    required
+                                                    className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-widest text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
+                                                    placeholder="V-12345678"
+                                                    value={formData.doc_id}
+                                                    onChange={(e) => setFormData({ ...formData, doc_id: e.target.value.toUpperCase() })}
                                                 />
                                             </div>
                                         </div>
+
                                         <div className="group/field">
-                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Teléfono Móvil</label>
+                                            <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Celular</label>
                                             <div className="relative">
                                                 <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">smartphone</span>
                                                 <input
                                                     type="tel"
                                                     className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-bold text-sm tracking-widest text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
-                                                    placeholder="0412-0000000"
+                                                    placeholder="04121234567"
                                                     value={formData.phone}
                                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                                 />
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div className="group/field">
+                                        <label className="block text-[10px] font-display-black text-slate-400 uppercase tracking-[0.2em] mb-3 px-1 group-focus-within/field:text-emerald-500 transition-colors">Correo Electrónico</label>
+                                        <div className="relative">
+                                            <span className="material-icons absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/field:text-emerald-500 transition-colors text-lg">alternate_email</span>
+                                            <input
+                                                type="email"
+                                                className="w-full bg-slate-100/50 dark:bg-black/20 border border-transparent focus:border-emerald-500/30 dark:focus:border-emerald-500/20 rounded-2xl pl-14 pr-6 py-4 outline-none font-display-medium text-sm text-slate-900 dark:text-white transition-all placeholder:text-slate-400/50"
+                                                placeholder="correo@ejemplo.com"
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="group/field pt-2">
+                                        <label className="flex items-center gap-4 cursor-pointer p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 hover:border-emerald-500/30 transition-all">
+                                            <div className="flex-1">
+                                                <span className="block text-[10px] font-display-black text-emerald-600 uppercase tracking-widest mb-1">Acceso Digital</span>
+                                                <p className="text-[10px] font-display-medium text-slate-500 leading-tight">Activar acceso automático al Portal del Propietario</p>
+                                            </div>
+                                            <div
+                                                onClick={() => setFormData({ ...formData, enable_portal: !formData.enable_portal })}
+                                                className={`w-12 h-6 rounded-full relative transition-all duration-300 ${formData.enable_portal ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'}`}
+                                            >
+                                                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 ${formData.enable_portal ? 'left-7' : 'left-1'}`}></div>
+                                            </div>
+                                        </label>
+                                        {!editingId && formData.enable_portal && (
+                                            <p className="mt-3 px-2 text-[9px] font-display-bold text-emerald-500/70 uppercase tracking-tighter">
+                                                <span className="material-icons text-[10px] align-middle mr-1">info</span>
+                                                Se usará la cédula como contraseña temporal
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

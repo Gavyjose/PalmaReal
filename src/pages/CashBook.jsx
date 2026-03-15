@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
+import { useAuth } from '../context/AuthContext';
 
 const MONTHS = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -17,6 +18,7 @@ const COMMISSION_KEYWORDS = ['COMISION', 'COMIS.', 'MANTENIMIENTO DE CUENTA', 'U
 
 const CashBook = () => {
     const { activeTowers } = useTowers();
+    const { userRole } = useAuth();
     const now = new Date();
     const [selectedTower, setSelectedTower] = useState('');
     const [selectedMonth, setSelectedMonth] = useState(String(now.getMonth() + 1).padStart(2, '0'));
@@ -423,38 +425,42 @@ const CashBook = () => {
 
                 {/* Main Action Buttons */}
                 <div className="flex flex-wrap items-center gap-3">
-                    {!hasInitial && (
-                        <button onClick={() => setShowInitialModal(true)}
-                            className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                <span className="material-icons text-emerald-500">flag</span>
-                            </div>
-                            <div className="text-left">
-                                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Apertura</p>
-                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Saldo Inicial</p>
-                            </div>
-                        </button>
+                    {userRole !== 'VISOR' && (
+                        <>
+                            {!hasInitial && (
+                                <button onClick={() => setShowInitialModal(true)}
+                                    className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                        <span className="material-icons text-emerald-500">flag</span>
+                                    </div>
+                                    <div className="text-left">
+                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Apertura</p>
+                                        <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Saldo Inicial</p>
+                                    </div>
+                                </button>
+                            )}
+                            <button onClick={() => setShowManualModal(true)}
+                                className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
+                                <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <span className="material-icons text-slate-500">add_circle</span>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Manual</p>
+                                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Nuevo Movimiento</p>
+                                </div>
+                            </button>
+                            <button onClick={handleSync} disabled={syncing}
+                                className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all flex items-center gap-3 group disabled:opacity-60">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:rotate-180 transition-transform duration-500">
+                                    <span className={`material-icons text-white ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_download'}</span>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-xs font-black text-white/70 uppercase tracking-widest">Automático</p>
+                                    <p className="text-sm font-bold text-white uppercase">{syncing ? 'Sincronizando...' : 'Cargar Período'}</p>
+                                </div>
+                            </button>
+                        </>
                     )}
-                    <button onClick={() => setShowManualModal(true)}
-                        className="px-6 py-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex items-center gap-3 group">
-                        <div className="w-10 h-10 rounded-xl bg-slate-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <span className="material-icons text-slate-500">add_circle</span>
-                        </div>
-                        <div className="text-left">
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Manual</p>
-                            <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Nuevo Movimiento</p>
-                        </div>
-                    </button>
-                    <button onClick={handleSync} disabled={syncing}
-                        className="px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all flex items-center gap-3 group disabled:opacity-60">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover:rotate-180 transition-transform duration-500">
-                            <span className={`material-icons text-white ${syncing ? 'animate-spin' : ''}`}>{syncing ? 'sync' : 'cloud_download'}</span>
-                        </div>
-                        <div className="text-left">
-                            <p className="text-xs font-black text-white/70 uppercase tracking-widest">Automático</p>
-                            <p className="text-sm font-bold text-white uppercase">{syncing ? 'Sincronizando...' : 'Cargar Período'}</p>
-                        </div>
-                    </button>
                 </div>
             </div>
 
@@ -503,7 +509,7 @@ const CashBook = () => {
             )}
 
             {/* Banner: Arrastre de Saldo disponible */}
-            {prevMonthBalance && !hasInitial && (
+            {prevMonthBalance && !hasInitial && userRole !== 'VISOR' && (
                 <div className="mb-10 p-6 rounded-[2rem] bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl shadow-emerald-500/20 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl group-hover:scale-150 transition-transform duration-700"></div>
                     <div className="w-16 h-16 rounded-[2rem] bg-white/20 backdrop-blur-md flex items-center justify-center shrink-0">
@@ -652,7 +658,7 @@ const CashBook = () => {
                                             </td>
                                             <td className="px-8 py-6 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    {(e.source === 'manual' || e.source === 'saldo_inicial') ? (
+                                                    {userRole !== 'VISOR' && (e.source === 'manual' || e.source === 'saldo_inicial') ? (
                                                         <button onClick={() => handleDelete(e.id)}
                                                             className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-500 hover:bg-pink-500 hover:text-white transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                                                             <span className="material-icons text-sm">delete_outline</span>

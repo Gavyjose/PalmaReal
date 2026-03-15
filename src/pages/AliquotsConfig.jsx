@@ -2,26 +2,33 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
 import { BUILDING_CONFIG } from '../config/buildingConfig';
-import PrintPreview from '../components/PrintPreview';
-import PaymentModal from '../components/PaymentModal';
+const PrintPreview = React.lazy(() => import('../components/PrintPreview'));
+const PaymentModal = React.lazy(() => import('../components/PaymentModal'));
 import { formatCurrency, formatNumber } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
+
+const ALIQUOTS_MONTH_NAMES = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
 
 const AliquotsConfig = () => {
     const [selectedTower, setSelectedTower] = useState('');
-    const aliquotsMonthNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
-    const currentAliquotsPeriod = `${aliquotsMonthNames[new Date().getMonth()]} ${new Date().getFullYear()}`;
+    const currentAliquotsPeriod = `${ALIQUOTS_MONTH_NAMES[new Date().getMonth()]} ${new Date().getFullYear()}`;
     const [period, setPeriod] = useState(currentAliquotsPeriod);
     const { activeTowers, loading: towersLoading, lastSelectedTower, setLastSelectedTower } = useTowers();
+    const { role } = useAuth();
 
     // Set initial tower when towers load
     useEffect(() => {
         if (activeTowers.length > 0 && !selectedTower) {
-            const defaultTower = activeTowers.find(t => t.name === lastSelectedTower)?.name || activeTowers[0].name;
-            setSelectedTower(defaultTower);
-            if (!lastSelectedTower) setLastSelectedTower(defaultTower);
+            if (lastSelectedTower && activeTowers.find(t => t.name === lastSelectedTower)) {
+                setSelectedTower(lastSelectedTower);
+            } else {
+                setSelectedTower(activeTowers[0].name);
+            }
         }
-    }, [activeTowers]);
+    }, [activeTowers, lastSelectedTower, selectedTower]);
+
     const [expenses, setExpenses] = useState([]);
+    const [deletedExpenseIds, setDeletedExpenseIds] = useState([]);
     const [commonExpenses, setCommonExpenses] = useState([]);
     const [newExpenseDesc, setNewExpenseDesc] = useState('');
     const [newExpenseAmount, setNewExpenseAmount] = useState('');
@@ -35,6 +42,7 @@ const AliquotsConfig = () => {
     const [selectedExpense, setSelectedExpense] = useState(null);
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [fetchError, setFetchError] = useState(null);
 
 
 
@@ -63,14 +71,36 @@ const AliquotsConfig = () => {
     const fetchPeriodData = async () => {
         try {
             setLoadingData(true);
-            const { data: periodData, error: periodError } = await supabase
+            setFetchError(null);
+
+            // 0. Parallel fetching approach
+            const periodParts = period.toUpperCase().split(' ');
+            const monthName = periodParts[0];
+            const year = periodParts[1] || new Date().getFullYear().toString();
+            const monthIndex = ALIQUOTS_MONTH_NAMES.indexOf(monthName);
+            const month = (monthIndex + 1).toString().padStart(2, '0');
+            const firstDay = `${year}-${month}-01`;
+
+            const periodPromise = supabase
                 .from('condo_periods')
                 .select('*')
                 .eq('tower_id', selectedTower)
                 .eq('period_name', period.toUpperCase())
                 .maybeSingle();
 
-            if (periodError) throw periodError;
+            const bcvPromise = supabase
+                .from('exchange_rates')
+                .select('rate_value')
+                .lte('rate_date', firstDay)
+                .order('rate_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const [periodRes, bcvRes] = await Promise.all([periodPromise, bcvPromise]);
+
+            if (periodRes.error) throw periodRes.error;
+            const periodData = periodRes.data;
+            const rate = bcvRes.data?.rate_value || 1;
 
             if (periodData) {
                 setCurrentPeriodId(periodData.id);
@@ -104,24 +134,6 @@ const AliquotsConfig = () => {
                 const bankCommissionsBs = parseFloat(periodData.bank_commissions_total_bs) || 0;
 
                 if (bankCommissionsBs > 0) {
-                    // Parsear periodo para obtener mes y año
-                    const periodParts = period.toUpperCase().split(' ');
-                    const monthName = periodParts[0];
-                    const year = periodParts[1] || new Date().getFullYear().toString();
-                    const monthIndex = aliquotsMonthNames.indexOf(monthName);
-                    const month = (monthIndex + 1).toString().padStart(2, '0');
-                    const firstDay = `${year}-${month}-01`;
-
-                    // Obtener tasa BCV del primer día del mes
-                    const { data: bcvRate } = await supabase
-                        .from('exchange_rates')
-                        .select('rate_value')
-                        .lte('rate_date', firstDay)
-                        .order('rate_date', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-
-                    const rate = bcvRate?.rate_value || 1;
                     const commissionUsd = parseFloat((bankCommissionsBs / rate).toFixed(2));
 
                     // Buscar si ya existe el concepto de COMISION BANCARIA / BANCAREA
@@ -131,7 +143,7 @@ const AliquotsConfig = () => {
                     );
 
                     const commissionExpense = {
-                        id: existingCommIndex >= 0 ? expensesList[existingCommIndex].id : 'bank-commission-auto',
+                        id: existingCommIndex >= 0 ? expensesList[existingCommIndex].id : crypto.randomUUID(),
                         description: 'COMISIÓN BANCARIA',
                         amount: existingCommIndex >= 0 ? expensesList[existingCommIndex].amount : commissionUsd,
                         amount_bs: bankCommissionsBs,
@@ -152,15 +164,17 @@ const AliquotsConfig = () => {
                 }
 
                 setExpenses(expensesList);
-                // El cierre del try catch original sigue intacto
+                setDeletedExpenseIds([]); // Limpiar eliminaciones al cargar nuevo periodo
             } else {
                 setCurrentPeriodId(null);
                 setExpenses([]);
+                setDeletedExpenseIds([]);
                 setReserveFundAmount(0);
                 setPeriodStatus('BORRADOR');
             }
         } catch (error) {
             console.error('Error loading period data:', error);
+            setFetchError(error.message || 'Error al conectar con el servidor');
         } finally {
             setLoadingData(false);
         }
@@ -207,26 +221,45 @@ const AliquotsConfig = () => {
                 setCurrentPeriodId(periodId);
             }
 
-            // Para auto-guardado solo actualizamos gastos si hay cambios
-            if (expenses.length > 0 || periodId) {
-                await supabase.from('period_expenses').delete().eq('period_id', periodId);
+            // Guardado Seguro de Gastos (UPSERT + DELETE SELECTIVO)
+            if (expenses.length > 0 || deletedExpenseIds.length > 0) {
+                // 1. Ejecutar eliminaciones pendientes
+                if (deletedExpenseIds.length > 0) {
+                    const { error: delError } = await supabase
+                        .from('period_expenses')
+                        .delete()
+                        .in('id', deletedExpenseIds);
+                    if (delError) throw delError;
+                    setDeletedExpenseIds([]); // Limpiar tras éxito
+                }
 
+                // 2. Preparar y ejecutar Upsert
                 if (expenses.length > 0) {
-                    const expensesToSave = expenses.map((exp, index) => ({
-                        period_id: periodId,
-                        description: exp.description,
-                        amount: parseFloat(exp.amount),
-                        payment_status: exp.payment_status || 'PENDIENTE',
-                        bank_reference: exp.bank_reference || null,
-                        payment_date: exp.payment_date || null,
-                        amount_bs: exp.amount_bs || null,
-                        bcv_rate_at_payment: exp.bcv_rate_at_payment || null,
-                        amount_usd_at_payment: exp.amount_usd_at_payment || null,
-                        sort_order: index,
-                        is_bank_commission: exp.is_bank_commission || false
-                    }));
-                    const { error: insError } = await supabase.from('period_expenses').insert(expensesToSave);
-                    if (insError) throw insError;
+                    const expensesToSave = expenses.map((exp, index) => {
+                        // Asegurar que cada gasto tiene un ID (UUID)
+                        const expenseId = exp.id && !exp.id.includes('temp') ? exp.id : crypto.randomUUID();
+
+                        return {
+                            id: expenseId,
+                            period_id: periodId,
+                            description: exp.description,
+                            amount: parseFloat(exp.amount),
+                            payment_status: exp.payment_status || 'PENDIENTE',
+                            bank_reference: exp.bank_reference || null,
+                            payment_date: exp.payment_date || null,
+                            amount_bs: exp.amount_bs || null,
+                            bcv_rate_at_payment: exp.bcv_rate_at_payment || null,
+                            amount_usd_at_payment: exp.amount_usd_at_payment || null,
+                            sort_order: index,
+                            is_bank_commission: exp.is_bank_commission || false
+                        };
+                    });
+
+                    const { error: upsError } = await supabase
+                        .from('period_expenses')
+                        .upsert(expensesToSave);
+
+                    if (upsError) throw upsError;
                 }
             }
 
@@ -307,10 +340,16 @@ const AliquotsConfig = () => {
 
     const handleRemoveExpense = async (id) => {
         if (isPublished) return;
+
+        // Si el gasto ya existe en la DB (es un UUID válido), lo rastreamos para borrarlo al guardar
+        if (id && id.length > 20) {
+            setDeletedExpenseIds(prev => [...prev, id]);
+        }
+
         const filteredExpenses = expenses.filter(exp => exp.id !== id);
         setExpenses(filteredExpenses);
 
-        // Auto-guardado inmediato tras eliminación
+        // Auto-guardado inmediato tras eliminación (la lógica ahora usará deletedExpenseIds)
         await handleSaveData(true);
     };
 
@@ -390,23 +429,30 @@ const AliquotsConfig = () => {
                 periodId = pData.id;
                 setCurrentPeriodId(periodId);
 
-                await supabase.from('period_expenses').delete().eq('period_id', periodId);
+                // Guardado Seguro de Gastos (UPSERT + DELETE SELECTIVO)
+                if (deletedExpenseIds.length > 0) {
+                    await supabase.from('period_expenses').delete().in('id', deletedExpenseIds);
+                    setDeletedExpenseIds([]);
+                }
+
                 if (expenses.length > 0) {
-                    const { error: insError } = await supabase
+                    const { error: upsError } = await supabase
                         .from('period_expenses')
-                        .insert(expenses.map(e => ({
+                        .upsert(expenses.map((e, index) => ({
+                            id: e.id && e.id.length > 20 ? e.id : crypto.randomUUID(),
                             period_id: periodId,
                             description: e.description,
                             amount: parseFloat(e.amount),
-                            // Preservar datos de pago al cerrar
                             payment_status: e.payment_status || 'PENDIENTE',
                             bank_reference: e.bank_reference || null,
                             payment_date: e.payment_date || null,
                             amount_bs: e.amount_bs || null,
                             bcv_rate_at_payment: e.bcv_rate_at_payment || null,
-                            amount_usd_at_payment: e.amount_usd_at_payment || null
+                            amount_usd_at_payment: e.amount_usd_at_payment || null,
+                            sort_order: index,
+                            is_bank_commission: e.is_bank_commission || false
                         })));
-                    if (insError) throw insError;
+                    if (upsError) throw upsError;
                 }
             } else {
                 const { error } = await supabase
@@ -542,7 +588,7 @@ const AliquotsConfig = () => {
                     </div>
                 </div>
 
-                {!isPublished && (
+                {!isPublished && role !== 'VISOR' ? (
                     <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-slate-800/50 p-6 rounded-[2rem] shadow-xl shadow-slate-200/20 dark:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
                         <h4 className="font-display-bold text-slate-900 dark:text-white uppercase tracking-widest text-[10px] mb-5 flex items-center gap-2 opacity-70">
                             <span className="material-icons text-emerald-500 text-sm">add_circle</span>
@@ -588,7 +634,25 @@ const AliquotsConfig = () => {
                             </button>
                         </div>
                     </div>
-                )}
+                ) : null}
+
+                {fetchError ? (
+                    <div className="bg-rose-500/10 border border-rose-500/20 p-6 rounded-[2rem] flex items-center justify-between gap-4 animate-in slide-in-from-top-4 duration-500 mb-8">
+                        <div className="flex items-center gap-4 text-rose-600 dark:text-rose-400">
+                            <span className="material-icons">error_outline</span>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest">Error de Sincronización</p>
+                                <p className="text-xs font-medium opacity-80">{fetchError}</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={fetchPeriodData}
+                            className="px-6 py-2 bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
+                        >
+                            Reintentar
+                        </button>
+                    </div>
+                ) : null}
 
                 {/* Social Board Table */}
                 <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-slate-800/50 rounded-[2.5rem] shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
@@ -632,8 +696,7 @@ const AliquotsConfig = () => {
                                     <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10">Ejecutado ($)</th>
                                     <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10">Delta ($)</th>
                                     <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10">Estatus</th>
-                                    <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10">Acción</th>
-                                    {!isPublished && <th className="px-4 py-5 border-b border-white/10"></th>}
+                                    {role !== 'VISOR' && <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-white/10">Acciones</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5 dark:divide-slate-800/50">
@@ -643,6 +706,7 @@ const AliquotsConfig = () => {
                                             <input
                                                 className="w-full bg-transparent border-none text-[11px] font-black text-slate-700 dark:text-slate-200 outline-none uppercase tracking-tight focus:text-emerald-500 transition-colors"
                                                 value={exp.description}
+                                                id={`exp-desc-${exp.id}`}
                                                 disabled={isPublished}
                                                 spellCheck="true"
                                                 onChange={(e) => handleUpdateExpense(exp.id, 'description', e.target.value.toUpperCase())}
@@ -693,46 +757,65 @@ const AliquotsConfig = () => {
                                                     }`}>
                                                     {exp.payment_status || 'PENDIENTE'}
                                                 </span>
-                                                {exp.bank_reference && (
+                                                {exp.bank_reference ? (
                                                     <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-tighter">REF: {exp.bank_reference}</span>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {isPublished && exp.payment_status !== 'PAGADO' && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedExpense(exp);
-                                                            setShowPaymentModal(true);
-                                                        }}
-                                                        className="flex items-center gap-2 bg-slate-900 dark:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
-                                                    >
-                                                        <span className="material-icons text-xs">payments</span>
-                                                        Liquidar
-                                                    </button>
-                                                )}
-                                                {exp.payment_status === 'PAGADO' && (
-                                                    <button
-                                                        onClick={() => handleResetPayment(exp.id)}
-                                                        className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                                                        title="Revertir pago"
-                                                    >
-                                                        <span className="material-icons text-sm">history_edu</span>
-                                                    </button>
-                                                )}
-                                            </div>
+                                            {role !== 'VISOR' && (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {!isPublished ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                const input = document.getElementById(`exp-desc-${exp.id}`);
+                                                                if (input) {
+                                                                    input.focus();
+                                                                    input.select();
+                                                                }
+                                                            }}
+                                                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all"
+                                                            title="Editar concepto"
+                                                        >
+                                                            <span className="material-icons text-sm">edit</span>
+                                                        </button>
+                                                    ) : null}
+
+                                                    {isPublished && exp.payment_status !== 'PAGADO' ? (
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedExpense(exp);
+                                                                setShowPaymentModal(true);
+                                                            }}
+                                                            className="flex items-center gap-2 bg-slate-900 dark:bg-emerald-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-md shadow-emerald-500/10"
+                                                        >
+                                                            <span className="material-icons text-xs">payments</span>
+                                                            Liquidar
+                                                        </button>
+                                                    ) : null}
+
+                                                    {!isPublished ? (
+                                                        <button
+                                                            onClick={() => handleRemoveExpense(exp.id)}
+                                                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                                                            title="Eliminar gasto"
+                                                        >
+                                                            <span className="material-icons text-sm">delete_outline</span>
+                                                        </button>
+                                                    ) : null}
+
+                                                    {exp.payment_status === 'PAGADO' ? (
+                                                        <button
+                                                            onClick={() => handleResetPayment(exp.id)}
+                                                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                                                            title="Revertir pago"
+                                                        >
+                                                            <span className="material-icons text-sm">history_edu</span>
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            )}
                                         </td>
-                                        {!isPublished && (
-                                            <td className="px-4 py-5 text-center">
-                                                <button
-                                                    onClick={() => handleRemoveExpense(exp.id)}
-                                                    className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
-                                                >
-                                                    <span className="material-icons text-sm">delete_outline</span>
-                                                </button>
-                                            </td>
-                                        )}
                                     </tr>
                                 ))}
                                 {expenses.length === 0 && (

@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import { formatNumber } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
+import { formatCurrency, formatNumber } from '../utils/formatters';
+const CobranzasReport = React.lazy(() => import('../components/CobranzasReport'));
+const QuotaPaymentModal = React.lazy(() => import('../components/QuotaPaymentModal'));
 import { sortUnits } from '../utils/unitSort';
-import QuotaPaymentModal from '../components/QuotaPaymentModal';
 import { useTowers } from '../hooks/useTowers';
 import { buildFinancialLedger } from '../utils/financialUtils';
 
-
+const MONTH_MAP = {
+    'ENERO': 0, 'FEBRERO': 1, 'MARZO': 2, 'ABRIL': 3, 'MAYO': 4, 'JUNIO': 5,
+    'JULIO': 6, 'AGOSTO': 7, 'SEPTIEMBRE': 8, 'OCTUBRE': 9, 'NOVIEMBRE': 10, 'DICIEMBRE': 11
+};
 const Cobranzas = () => {
     const [loading, setLoading] = useState(true);
     const [units, setUnits] = useState([]);
@@ -17,27 +22,28 @@ const Cobranzas = () => {
     const [selectedTower, setSelectedTower] = useState(lastSelectedTower || 'A1');
     const [searchTerm, setSearchTerm] = useState('');
     const [bcvRate, setBcvRate] = useState(0);
+    const { role } = useAuth();
 
     // Modal State
     const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showTransferDetails, setShowTransferDetails] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [selectedUnitPendingPeriods, setSelectedUnitPendingPeriods] = useState([]);
-
-    const monthMap = {
-        'ENERO': 0, 'FEBRERO': 1, 'MARZO': 2, 'ABRIL': 3, 'MAYO': 4, 'JUNIO': 5,
-        'JULIO': 6, 'AGOSTO': 7, 'SEPTIEMBRE': 8, 'OCTUBRE': 9, 'NOVIEMBRE': 10, 'DICIEMBRE': 11
-    };
-    const reverseMonthMap = Object.entries(monthMap).reduce((acc, [k, v]) => ({ ...acc, [v]: k }), {});
+    const [towerPeriods, setTowerPeriods] = useState([]);
+    const [specialProjects, setSpecialProjects] = useState([]);
+    const [specialPayments, setSpecialPayments] = useState([]);
+    const [allocations, setAllocations] = useState([]);
 
     const getPreviousPeriodName = (periodName) => {
         if (!periodName) return 'DEUDA ANTERIOR';
         const [month, year] = periodName.split(' ');
-        const mIdx = monthMap[month.toUpperCase()];
+        const mIdx = MONTH_MAP[month.toUpperCase()];
         if (mIdx === undefined) return 'DEUDA ANTERIOR';
 
         const prevMonthIdx = (mIdx - 1 + 12) % 12;
         const prevYear = mIdx === 0 ? parseInt(year) - 1 : year;
-        return `${reverseMonthMap[prevMonthIdx]} ${prevYear}`;
+        return `${REVERSE_MONTH_MAP[prevMonthIdx]} ${prevYear}`;
     };
 
     useEffect(() => {
@@ -53,14 +59,17 @@ const Cobranzas = () => {
     const fetchInitialData = async () => {
         try {
             setLoading(true);
-            // Fetch periods for the list
-            const { data: allPeriods } = await supabase
-                .from('condo_periods')
-                .select('*')
-                .order('created_at', { ascending: false });
-            setPeriods(allPeriods || []);
 
-            if (allPeriods && allPeriods.length > 0) {
+            // Parallel fetch for periods and rate
+            const [periodsRes, rateRes] = await Promise.all([
+                supabase.from('condo_periods').select('*').order('created_at', { ascending: false }),
+                supabase.from('exchange_rates').select('rate_value').order('rate_date', { ascending: false }).limit(1)
+            ]);
+
+            const allPeriods = periodsRes.data || [];
+            setPeriods(allPeriods);
+
+            if (allPeriods.length > 0) {
                 const monthNames = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"];
                 const now = new Date();
                 const currentPeriodName = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
@@ -69,12 +78,9 @@ const Cobranzas = () => {
                 setCurrentPeriod(found || allPeriods[0]);
             }
 
-            const { data: rateData } = await supabase
-                .from('exchange_rates')
-                .select('rate_value')
-                .order('rate_date', { ascending: false })
-                .limit(1);
-            if (rateData && rateData.length > 0) setBcvRate(rateData[0].rate_value);
+            if (rateRes.data && rateRes.data.length > 0) {
+                setBcvRate(rateRes.data[0].rate_value);
+            }
 
         } catch (error) {
             console.error('Error fetching initial data:', error);
@@ -84,70 +90,46 @@ const Cobranzas = () => {
     };
 
     const fetchCollectionData = async () => {
-        if (!currentPeriod) return;
-        if (!selectedTower) return;
+        if (!currentPeriod || !selectedTower) return;
+
         if (selectedTower !== lastSelectedTower && selectedTower !== 'Todas las Torres') {
             setLastSelectedTower(selectedTower);
         }
+
         try {
             setLoading(true);
-            const { data: unitData } = await supabase
-                .from('units')
-                .select('*, owners(full_name)')
-                .eq('tower', selectedTower);
-            const sortedUnits = sortUnits(unitData || []);
-            setUnits(sortedUnits);
 
+            // Phase 1: Fetch Units and Periods in parallel
+            const [unitsRes, periodsRes, specialProjectsRes] = await Promise.all([
+                supabase.from('units').select('*, owners(full_name)').eq('tower', selectedTower),
+                supabase.from('condo_periods').select('*, period_expenses(amount)').eq('tower_id', selectedTower),
+                supabase.from('special_quota_projects').select('*').eq('tower_id', selectedTower).eq('status', 'ACTIVE')
+            ]);
+
+            const sortedUnits = sortUnits(unitsRes.data || []);
             const unitIds = sortedUnits.map(u => u.id);
+
             if (unitIds.length === 0) {
+                setUnits([]);
                 setPayments([]);
+                setTowerPeriods([]);
+                setSpecialProjects([]);
+                setSpecialPayments([]);
+                setAllocations([]);
                 return;
             }
 
-            // Fetch ALL periods for this tower WITH their expenses (to compute totals)
-            const { data: towerPeriodsRaw } = await supabase
-                .from('condo_periods')
-                .select('*, period_expenses(amount)')
-                .eq('tower_id', selectedTower);
+            // Phase 2: Fetch Payments and Special payments in parallel
+            const [paymentsRes, specialPaymentsRes] = await Promise.all([
+                supabase.from('unit_payments').select('*').in('unit_id', unitIds),
+                supabase.from('special_quota_payments').select('*').in('unit_id', unitIds)
+            ]);
 
-            // Sort periods chronologically by name (e.g., "ENERO 2026")
-            const towerPeriods = (towerPeriodsRaw || []).sort((a, b) => {
-                const [monthA, yearA] = a.period_name.split(' ');
-                const [monthB, yearB] = b.period_name.split(' ');
-                const mIdxA = monthMap[monthA?.toUpperCase()] ?? 0;
-                const mIdxB = monthMap[monthB?.toUpperCase()] ?? 0;
-                const yA = parseInt(yearA) || 0;
-                const yB = parseInt(yearB) || 0;
-                if (yA !== yB) return yA - yB;
-                return mIdxA - mIdxB;
-            });
+            const payData = paymentsRes.data || [];
 
-            // Compute per-period totals — same formula as AliquotsConfig.jsx
-            // total = sum(expenses) + reserve_fund,  aliquot = total / 16
-            towerPeriods.forEach(p => {
-                const expTotal = (p.period_expenses || []).reduce((s, e) => s + parseFloat(e.amount || 0), 0);
-                p._computed_total = parseFloat((expTotal + parseFloat(p.reserve_fund || 0)).toFixed(2));
-                p._unit_aliquot = parseFloat((p._computed_total / 16).toFixed(2));
-            });
-
-            // Fetch special quota projects for this tower
-            const { data: specialProjects } = await supabase
-                .from('special_quota_projects')
-                .select('*')
-                .eq('tower_id', selectedTower)
-                .eq('status', 'ACTIVE');
-
-            // Fetch ALL payments for units in this tower (all time)
-            const { data: payData } = await supabase
-                .from('unit_payments')
-                .select('*')
-                .in('unit_id', unitIds);
-
-            setPayments(payData || []);
-
-            // Fetch ALL allocations for those payments
-            const paymentIds = (payData || []).map(p => p.id);
+            // Phase 3: Allocations (must wait for payments IDs)
             let allocData = [];
+            const paymentIds = payData.map(p => p.id);
             if (paymentIds.length > 0) {
                 const { data: aData } = await supabase
                     .from('unit_payment_allocations')
@@ -156,16 +138,31 @@ const Cobranzas = () => {
                 allocData = aData || [];
             }
 
-            // Fetch special payments
-            const { data: specialPayments } = await supabase
-                .from('special_quota_payments')
-                .select('*')
-                .in('unit_id', unitIds);
+            // Process tower periods with computed totals
+            const towerPeriodsData = (periodsRes.data || []).sort((a, b) => {
+                const [monthA, yearA] = a.period_name.split(' ');
+                const [monthB, yearB] = b.period_name.split(' ');
+                const mIdxA = MONTH_MAP[monthA?.toUpperCase()] ?? 0;
+                const mIdxB = MONTH_MAP[monthB?.toUpperCase()] ?? 0;
+                const yA = parseInt(yearA) || 0;
+                const yB = parseInt(yearB) || 0;
+                return yA !== yB ? yA - yB : mIdxA - mIdxB;
+            });
 
-            window._towerPeriods = towerPeriods;
-            window._allAllocations = allocData;
-            window._specialProjects = specialProjects || [];
-            window._specialPayments = specialPayments || [];
+            towerPeriodsData.forEach(p => {
+                const expTotal = (p.period_expenses || []).reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                p._computed_total = parseFloat((expTotal + parseFloat(p.reserve_fund || 0)).toFixed(2));
+                p._unit_aliquot = parseFloat((p._computed_total / 16).toFixed(2));
+            });
+
+            // Update all state at once to prevent partial render issues
+            setUnits(sortedUnits);
+            setPayments(payData);
+            setTowerPeriods(towerPeriodsData);
+            setSpecialProjects(specialProjectsRes.data || []);
+            setSpecialPayments(specialPaymentsRes.data || []);
+            setAllocations(allocData);
+
         } catch (error) {
             console.error('Error fetching collection data:', error);
         } finally {
@@ -177,12 +174,8 @@ const Cobranzas = () => {
         const u = units.find(un => un.id === unitId);
         if (!u || !currentPeriod) return { predeuda: 0, mesCursoBase: 0, deudaTotal: 0, paidBs: 0, paidUsd: 0, remaining: 0, status: "Pendiente" };
 
-        const towerPeriods = window._towerPeriods || [];
-        const specialProjects = window._specialProjects || [];
-        const specialPayments = window._specialPayments || [];
-
         const [pMonthName, pYear] = currentPeriod.period_name.split(" ");
-        const mIdx = monthMap[pMonthName.toUpperCase()] || 0;
+        const mIdx = MONTH_MAP[pMonthName.toUpperCase()] || 0;
         const currentPeriodSortKey = parseInt(pYear) * 100 + mIdx;
         const startOfMonth = new Date(parseInt(pYear), mIdx, 1);
         const endOfMonth = new Date(parseInt(pYear), mIdx + 1, 0, 23, 59, 59);
@@ -190,7 +183,7 @@ const Cobranzas = () => {
         // 1. Ledger for the selected period (to get the balance AT THAT POINT)
         const periodsUpToActive = towerPeriods.filter(p => {
             const pts = p.period_name.split(" ");
-            const sk = parseInt(pts[1]) * 100 + (monthMap[pts[0].toUpperCase()] || 0);
+            const sk = parseInt(pts[1]) * 100 + (MONTH_MAP[pts[0].toUpperCase()] || 0);
             return sk <= currentPeriodSortKey;
         });
 
@@ -209,7 +202,7 @@ const Cobranzas = () => {
         // 2. Ledger for the PREVIOUS period (for "Deuda Hasta...")
         const periodsBefore = periodsUpToActive.filter(p => {
             const pts = p.period_name.split(" ");
-            const sk = parseInt(pts[1]) * 100 + (monthMap[pts[0].toUpperCase()] || 0);
+            const sk = parseInt(pts[1]) * 100 + (MONTH_MAP[pts[0].toUpperCase()] || 0);
             return sk < currentPeriodSortKey;
         });
 
@@ -272,14 +265,30 @@ const Cobranzas = () => {
         };
     };
 
-    const collectionTotals = React.useMemo(() => {
-        const filteredUnits = units.filter(u =>
+    const { filteredUnitsWithMetrics, collectionTotals } = React.useMemo(() => {
+        const filtered = units.filter(u =>
             u.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (u.owners?.full_name || "").toLowerCase().includes(searchTerm.toLowerCase())
         );
 
-        return filteredUnits.reduce((acc, u) => {
+        const unitsWithMetrics = filtered.map(u => {
             const m = getUnitMetrics(u.id);
+            return {
+                ...u,
+                metrics: m,
+                // para compatibilidad con el reporte:
+                unit_name: u.number,
+                owner_name: u.owners?.full_name,
+                previous_debt: m.predeuda,
+                month_quota: m.mesCursoBase,
+                total_debt: m.deudaTotal,
+                total_paid: m.paidUsd,
+                balance: m.remaining
+            };
+        });
+
+        const totals = unitsWithMetrics.reduce((acc, u) => {
+            const m = u.metrics;
             acc.predeuda += m.predeuda || 0;
             acc.mesCurso += m.mesCursoBase || 0;
             acc.acumulado += m.deudaTotal || 0;
@@ -299,7 +308,9 @@ const Cobranzas = () => {
             usdTotal: 0,
             receivable: 0
         });
-    }, [units, payments, currentPeriod, bcvRate, searchTerm]);
+
+        return { filteredUnitsWithMetrics: unitsWithMetrics, collectionTotals: totals };
+    }, [units, payments, currentPeriod, bcvRate, searchTerm, towerPeriods, specialProjects, specialPayments, allocations]);
 
     const totalCollectedBs = collectionTotals.bs;
     const totalCollectedUsd = collectionTotals.usdTotal; // Legacy variable if needed elsewhere
@@ -336,7 +347,7 @@ const Cobranzas = () => {
                             <div className="flex items-center gap-2 px-4 py-2 bg-teal-50 dark:bg-teal-500/10 rounded-2xl border border-teal-100 dark:border-teal-500/20">
                                 <span className="material-icons text-teal-500 text-sm">currency_exchange</span>
                                 <span className="text-xs font-display-bold text-teal-700 dark:text-teal-300">
-                                    TIPO DE CAMBIO: <span className="font-mono text-sm ml-1">{formatNumber(bcvRate || 0)} Bs/$</span>
+                                    TIPO DE CAMBIO: <span className="font-mono text-sm ml-1">{formatCurrency(bcvRate || 0)} Bs/$</span>
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
@@ -348,17 +359,20 @@ const Cobranzas = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <button className="flex items-center gap-3 px-8 py-4 bg-slate-900 dark:bg-emerald-500 text-white dark:text-slate-950 rounded-2xl font-display-bold text-sm shadow-xl shadow-slate-900/20 dark:shadow-emerald-500/20 hover:scale-105 hover:-translate-y-1 active:scale-95 transition-all duration-300 group/btn">
-                            <span className="material-icons text-lg group-hover/btn:rotate-12 transition-transform">cloud_download</span>
-                            DESCARGAR MATRIZ
+                    <div className="flex items-center gap-4 no-print">
+                        <button
+                            onClick={() => setShowReport(true)}
+                            className="flex items-center gap-3 px-8 py-4 bg-emerald-600 text-white rounded-2xl font-display-bold text-sm shadow-xl shadow-emerald-600/20 hover:scale-105 hover:-translate-y-1 active:scale-95 transition-all duration-300 group/btn"
+                        >
+                            <span className="material-icons text-lg group-hover/btn:rotate-12 transition-transform">description</span>
+                            GENERAR REPORTE
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Selectors Tray - Improved Aesthetics */}
-            <div className="social-card p-6 flex flex-wrap gap-6 items-end bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-white/10 dark:border-white/5 rounded-[2.5rem]">
+            <div className="social-card p-6 flex flex-wrap gap-6 items-end bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border-white/10 dark:border-white/5 rounded-[2.5rem] no-print">
                 <div className="flex-1 min-w-[300px]">
                     <label className="block text-[10px] font-display-bold text-slate-400 uppercase mb-3 ml-2 tracking-[0.2em]">Búsqueda Inteligente</label>
                     <div className="relative group">
@@ -408,7 +422,7 @@ const Cobranzas = () => {
                     { label: 'Unidades Solventes', val: `${units.filter(u => getUnitMetrics(u.id).status === 'Solvente').length}`, sub: 'Al día con sus pagos', icon: 'check_circle', color: 'emerald', progress: (units.filter(u => getUnitMetrics(u.id).status === 'Solvente').length / (units.length || 1)) * 100 },
                     { label: 'Índice Morosidad', val: `${formatNumber(units.length > 0 ? (units.filter(u => getUnitMetrics(u.id).status === 'Deudor').length / units.length) * 100 : 0)}%`, sub: 'Unidades con deuda', icon: 'priority_high', color: 'rose', progress: units.length > 0 ? (units.filter(u => getUnitMetrics(u.id).status === 'Deudor').length / units.length) * 100 : 0 },
                     { label: 'Ingresos Divisas', val: `$ ${formatNumber(collectionTotals.usdTotal)}`, sub: 'Recaudación total USD', icon: 'payments', color: 'teal', progress: 85 },
-                    { label: 'Cuentas por Cobrar', val: `$ ${formatNumber(collectionTotals.receivable)}`, sub: 'Monto total pendiente', icon: 'account_balance', color: 'slate', progress: 30 },
+                    { label: 'Cuentas por Cobrar', val: `${collectionTotals.receivable < -0.01 ? '- $' : '$'} ${formatNumber(Math.abs(collectionTotals.receivable))}`, sub: 'Monto total pendiente', icon: 'account_balance', color: 'slate', progress: 30 },
                 ].map((stat, i) => (
                     <div key={i} className="group relative">
                         <div className={`absolute -inset-0.5 bg-gradient-to-br ${stat.color === 'emerald' ? 'from-emerald-500/20' : stat.color === 'rose' ? 'from-rose-500/20' : stat.color === 'teal' ? 'from-teal-500/20' : 'from-slate-500/20'} to-transparent rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition duration-500`}></div>
@@ -440,7 +454,7 @@ const Cobranzas = () => {
             </div>
 
             {/* Matrix Table - Social VIVO Premium Version */}
-            <div className="social-card border-none overflow-hidden flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10">
+            <div id="printable-report" className="social-card border-none overflow-hidden flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-white/10">
                 <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
                     <table className="w-full border-separate border-spacing-0">
                         <thead>
@@ -456,7 +470,7 @@ const Cobranzas = () => {
                                 <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Monto Total ($)</th>
                                 <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Pagos Realizados</th>
                                 <th className="px-6 py-6 text-right text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Por Cobrar ($)</th>
-                                <th className="px-8 py-6 text-center text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Gestión</th>
+                                {role !== 'VISOR' && <th className="px-8 py-6 text-center text-[11px] font-display-bold uppercase tracking-[0.2em] text-slate-500">Gestión</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
@@ -477,8 +491,8 @@ const Cobranzas = () => {
                                         </div>
                                     </td>
                                 </tr>
-                            ) : units.filter(u => u.number.toLowerCase().includes(searchTerm.toLowerCase()) || (u.owners?.full_name || "").toLowerCase().includes(searchTerm.toLowerCase())).map(u => {
-                                const metrics = getUnitMetrics(u.id);
+                            ) : filteredUnitsWithMetrics.map(u => {
+                                const metrics = u.metrics;
                                 const isSolvente = metrics.remaining <= 0.1;
                                 return (
                                     <tr key={u.id} className="group hover:bg-emerald-50/30 dark:hover:bg-emerald-500/5 transition-all duration-300">
@@ -501,8 +515,8 @@ const Cobranzas = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-6 text-right font-mono text-sm">
-                                            <span className={`px-2 py-1 rounded-lg ${metrics.predeuda > 0.1 ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200' : 'text-slate-400 opacity-50'}`}>
-                                                {formatNumber(Math.abs(metrics.predeuda))}
+                                            <span className={`px-2 py-1 rounded-lg ${metrics.predeuda > 0.1 ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-200' : 'text-emerald-500 bg-emerald-500/10'}`}>
+                                                {metrics.predeuda < -0.01 ? '- ' : ''}{formatNumber(Math.abs(metrics.predeuda))}
                                             </span>
                                         </td>
                                         <td className="px-6 py-6 text-right font-mono text-sm text-slate-900 dark:text-slate-200">
@@ -514,7 +528,7 @@ const Cobranzas = () => {
                                         <td className="px-6 py-6 text-right">
                                             <div className="inline-flex flex-col items-end px-3 py-1 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
                                                 <span className={`font-mono text-base font-black ${metrics.deudaTotal > 0.1 ? 'text-slate-900 dark:text-white' : 'text-emerald-500'}`}>
-                                                    {formatNumber(Math.abs(metrics.deudaTotal))}
+                                                    {metrics.deudaTotal < -0.01 ? '- ' : ''}{formatNumber(Math.abs(metrics.deudaTotal))}
                                                 </span>
                                             </div>
                                         </td>
@@ -529,36 +543,38 @@ const Cobranzas = () => {
                                         </td>
                                         <td className="px-6 py-6 text-right">
                                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-mono text-base font-black shadow-sm transition-all duration-300 group-hover:scale-105 ${isSolvente ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30' : 'bg-rose-50 text-rose-600 border border-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20'}`}>
-                                                {formatNumber(Math.abs(metrics.remaining))}
+                                                {metrics.remaining < -0.01 ? '- ' : ''}{formatNumber(Math.abs(metrics.remaining))}
                                                 <span className="text-[10px] font-bold">$</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 text-center">
-                                            <div className="flex justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
-                                                <button
-                                                    onClick={() => {
-                                                        const uMetrics = getUnitMetrics(u.id);
-                                                        const pending = uMetrics.fullLedger.rawCharges
-                                                            .filter(c => c.status !== 'PAGADO')
-                                                            .map(c => ({
-                                                                ...c,
-                                                                amount: parseFloat((c.original_aliquot - c.paid_amount).toFixed(2))
-                                                            }));
-                                                        setSelectedUnit(u);
-                                                        setSelectedUnitPendingPeriods(pending);
-                                                        setShowPaymentModal(true);
-                                                    }}
-                                                    className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-lg shadow-emerald-500/40 relative group/icon"
-                                                    title="Registrar Cobro"
-                                                >
-                                                    <span className="material-icons text-xl">add_card</span>
-                                                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10px] font-black rounded-lg opacity-0 group-hover/icon:opacity-100 transition-opacity whitespace-nowrap shadow-xl">COBRO RÁPIDO</span>
-                                                </button>
-                                                <button className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-white flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:border-emerald-500 group/hist" title="Ver Histórico">
-                                                    <span className="material-icons text-xl group-hover/hist:rotate-[-12deg] transition-transform">history_edu</span>
-                                                </button>
-                                            </div>
-                                        </td>
+                                        {role !== 'VISOR' && (
+                                            <td className="px-8 py-6 text-center">
+                                                <div className="flex justify-center gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-4 group-hover:translate-x-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            const uMetrics = getUnitMetrics(u.id);
+                                                            const pending = uMetrics.fullLedger.rawCharges
+                                                                .filter(c => c.status !== 'PAGADO')
+                                                                .map(c => ({
+                                                                    ...c,
+                                                                    amount: parseFloat((c.original_aliquot - c.paid_amount).toFixed(2))
+                                                                }));
+                                                            setSelectedUnit(u);
+                                                            setSelectedUnitPendingPeriods(pending);
+                                                            setShowPaymentModal(true);
+                                                        }}
+                                                        className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-lg shadow-emerald-500/40 relative group/icon"
+                                                        title="Registrar Cobro"
+                                                    >
+                                                        <span className="material-icons text-xl">add_card</span>
+                                                        <span className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 text-[10px] font-black rounded-lg opacity-0 group-hover/icon:opacity-100 transition-opacity whitespace-nowrap shadow-xl">COBRO RÁPIDO</span>
+                                                    </button>
+                                                    <button className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-white flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:border-emerald-500 group/hist" title="Ver Histórico">
+                                                        <span className="material-icons text-xl group-hover/hist:rotate-[-12deg] transition-transform">history_edu</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}
@@ -680,7 +696,7 @@ const Cobranzas = () => {
             </div>
 
             {/* Modal de Pago - Rediseñado indirectamente vía Props/Clases */}
-            {showPaymentModal && selectedUnit && (
+            {showPaymentModal && selectedUnit ? (
                 <QuotaPaymentModal
                     isOpen={showPaymentModal}
                     onClose={() => {
@@ -694,7 +710,24 @@ const Cobranzas = () => {
                         fetchCollectionData();
                     }}
                 />
-            )}
+            ) : null}
+            {/* Report Preview Modal */}
+            <CobranzasReport
+                isOpen={showReport}
+                onClose={() => setShowReport(false)}
+                data={{
+                    units: filteredUnitsWithMetrics,
+                    totals: {
+                        due: collectionTotals.predeuda,
+                        month: collectionTotals.mesCurso,
+                        total: collectionTotals.acumulado,
+                        paid: collectionTotals.usdTotal,
+                        balance: collectionTotals.receivable
+                    },
+                    selectedTower: selectedTower,
+                    towerId: selectedTower
+                }}
+            />
         </div>
     );
 };

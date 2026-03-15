@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
+import { useAuth } from '../context/AuthContext';
 import { formatNumber } from '../utils/formatters';
 import { sortUnits } from '../utils/unitSort';
+import { usePaymentOcr } from '../hooks/usePaymentOcr';
 
 const fetchSpecialQuotasData = async ([_, selectedTower]) => {
     if (!selectedTower) return null;
@@ -16,7 +18,7 @@ const fetchSpecialQuotasData = async ([_, selectedTower]) => {
 
     const sortedUnits = sortUnits(unitsData || []);
 
-    // 2. Fetch project
+    // 2. Fetch active project
     const { data: projData } = await supabase
         .from('special_quota_projects')
         .select('*')
@@ -24,6 +26,14 @@ const fetchSpecialQuotasData = async ([_, selectedTower]) => {
         .eq('status', 'ACTIVE')
         .limit(1)
         .maybeSingle();
+
+    // 3. Fetch closed projects (history)
+    const { data: closedProjects } = await supabase
+        .from('special_quota_projects')
+        .select('*')
+        .eq('tower_id', selectedTower)
+        .eq('status', 'CLOSED')
+        .order('closed_at', { ascending: false });
 
     let finalPayments = [];
     let finalExpenses = [];
@@ -71,11 +81,13 @@ const fetchSpecialQuotasData = async ([_, selectedTower]) => {
         units: sortedUnits,
         project: projData || null,
         payments: finalPayments,
-        expenses: finalExpenses
+        expenses: finalExpenses,
+        closedProjects: closedProjects || []
     };
 };
 
 const SpecialQuotas = () => {
+    const { userRole } = useAuth();
     const { activeTowers, lastSelectedTower, setLastSelectedTower } = useTowers();
     // Initialize from localStorage so first render has a valid tower
     const [localSelectedTower, setLocalSelectedTower] = useState(lastSelectedTower || '');
@@ -101,12 +113,16 @@ const SpecialQuotas = () => {
     const project = data?.project || null;
     const payments = data?.payments || [];
     const projectExpenses = data?.expenses || [];
+    const closedProjects = data?.closedProjects || [];
 
     const [showProjectModal, setShowProjectModal] = useState(false);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showExpenseModal, setShowExpenseModal] = useState(false);
+    const [showCloseConfirmModal, setShowCloseConfirmModal] = useState(false);
     const [isMutating, setIsMutating] = useState(false);
     const [expandedUnitId, setExpandedUnitId] = useState(null);
+    const [expandedHistoryId, setExpandedHistoryId] = useState(null);
+    const [historyData, setHistoryData] = useState({});
 
     const loading = isDataLoading || isMutating;
 
@@ -163,6 +179,16 @@ const SpecialQuotas = () => {
         payment_date: new Date().toISOString().split('T')[0]
     });
     const [loadingRate, setLoadingRate] = useState(false);
+
+    const {
+        file,
+        previewUrl,
+        ocrProcessing,
+        ocrValidation,
+        handleFileChange,
+        resetOcr,
+        uploadReceipt
+    } = usePaymentOcr(paymentDetails.reference);
 
     useEffect(() => {
         if (showPaymentModal && paymentDetails.payment_method === 'TRANSFER' && paymentDetails.payment_date) {
@@ -303,14 +329,22 @@ const SpecialQuotas = () => {
         }
     };
 
+
     const handleRegisterPayment = async () => {
         if (!selectedUnitForPayment || !paymentDetails.amount) {
             alert('Completa los datos del pago.');
             return;
         }
 
+        if (ocrValidation && !ocrValidation.match) {
+            if (!confirm('Los últimos 6 dígitos de la referencia no coinciden con la captura. ¿Deseas asentar de todos modos?')) return;
+        }
+
         try {
             setIsMutating(true);
+
+            let receiptUrl = await uploadReceipt('payment-captures', 'special-quotas');
+
             const { error } = await supabase
                 .from('special_quota_payments')
                 .insert([{
@@ -319,13 +353,15 @@ const SpecialQuotas = () => {
                     installment_number: parseInt(paymentDetails.installment_number),
                     amount: parseFloat(paymentDetails.amount),
                     reference: paymentDetails.reference.toUpperCase(),
-                    payment_date: paymentDetails.payment_date
+                    payment_date: paymentDetails.payment_date,
+                    receipt_url: receiptUrl
                 }]);
 
             if (error) throw error;
 
             alert('✅ Pago registrado exitosamente.');
             setShowPaymentModal(false);
+            resetOcr();
             mutateData();
         } catch (error) {
             console.error('Error registering payment:', error);
@@ -432,6 +468,34 @@ const SpecialQuotas = () => {
         setShowExpenseModal(true);
     };
 
+    const handleCloseProject = async () => {
+        if (!project) return;
+        try {
+            setIsMutating(true);
+            const { error } = await supabase
+                .from('special_quota_projects')
+                .update({ status: 'CLOSED', closed_at: new Date().toISOString() })
+                .eq('id', project.id);
+            if (error) throw error;
+            setShowCloseConfirmModal(false);
+            mutateData();
+        } catch (error) {
+            console.error('Error closing project:', error);
+            alert('Error al cerrar el proyecto: ' + error.message);
+        } finally {
+            setIsMutating(false);
+        }
+    };
+
+    const fetchHistoryExpanded = async (projId) => {
+        if (historyData[projId]) return; // already loaded
+        const [{ data: pays }, { data: exps }] = await Promise.all([
+            supabase.from('special_quota_payments').select('*').eq('project_id', projId),
+            supabase.from('special_quota_expenses').select('*').eq('project_id', projId).order('date', { ascending: false })
+        ]);
+        setHistoryData(prev => ({ ...prev, [projId]: { payments: pays || [], expenses: exps || [] } }));
+    };
+
     const quotaPerUnit = project ? (project.total_budget / units.length) || 0 : 0;
     const amountPerInstallment = project ? (project.total_budget / (units.length * project.installments_count)) || 0 : 0;
     const totalCollected = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
@@ -505,38 +569,53 @@ const SpecialQuotas = () => {
                                 <span>Exportar</span>
                             </button>
 
-                            {project && (
-                                <button
-                                    onClick={() => setShowExpenseModal(true)}
-                                    className="h-[54px] px-6 bg-rose-500/10 dark:bg-rose-500/5 backdrop-blur-md border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-rose-500 hover:text-white transition-all shadow-xl active:scale-95 group"
-                                >
-                                    <div className="p-2 bg-rose-500/20 rounded-xl group-hover:bg-white group-hover:text-rose-500 transition-all">
-                                        <span className="material-icons text-sm">payments</span>
-                                    </div>
-                                    <span>Gasto</span>
-                                </button>
-                            )}
+                            {userRole !== 'VISOR' && (
+                                <>
+                                    {project && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowExpenseModal(true)}
+                                                className="h-[54px] px-6 bg-rose-500/10 dark:bg-rose-500/5 backdrop-blur-md border border-rose-500/20 rounded-2xl text-rose-600 dark:text-rose-400 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-rose-500 hover:text-white transition-all shadow-xl active:scale-95 group"
+                                            >
+                                                <div className="p-2 bg-rose-500/20 rounded-xl group-hover:bg-white group-hover:text-rose-500 transition-all">
+                                                    <span className="material-icons text-sm">payments</span>
+                                                </div>
+                                                <span>Gasto</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCloseConfirmModal(true)}
+                                                className="h-[54px] px-6 bg-slate-500/10 dark:bg-slate-500/10 backdrop-blur-md border border-slate-400/30 rounded-2xl text-slate-600 dark:text-slate-300 text-xs font-display-bold uppercase tracking-widest flex items-center gap-3 hover:bg-slate-600 hover:text-white transition-all shadow-xl active:scale-95 group"
+                                            >
+                                                <div className="p-2 bg-slate-400/20 rounded-xl group-hover:bg-white group-hover:text-slate-600 transition-all">
+                                                    <span className="material-icons text-sm">archive</span>
+                                                </div>
+                                                <span>Cerrar</span>
+                                            </button>
+                                        </>
+                                    )}
 
-                            {project ? (
-                                <button
-                                    onClick={() => setShowPaymentModal(true)}
-                                    className="h-[54px] px-8 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(5,150,105,0.3)] hover:shadow-[0_15px_35px_rgba(5,150,105,0.4)] transition-all active:scale-95 group"
-                                >
-                                    <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-90 transition-all duration-500">
-                                        <span className="material-icons text-sm">add_circle</span>
-                                    </div>
-                                    <span>Abonar Cuota</span>
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => setShowProjectModal(true)}
-                                    className="h-[54px] px-8 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_35px_rgba(37,99,235,0.4)] transition-all active:scale-95 group"
-                                >
-                                    <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-12 transition-all">
-                                        <span className="material-icons text-sm">rocket_launch</span>
-                                    </div>
-                                    <span>Lanzar Proyecto</span>
-                                </button>
+                                    {project ? (
+                                        <button
+                                            onClick={() => setShowPaymentModal(true)}
+                                            className="h-[54px] px-8 bg-gradient-to-br from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(5,150,105,0.3)] hover:shadow-[0_15px_35px_rgba(5,150,105,0.4)] transition-all active:scale-95 group"
+                                        >
+                                            <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-90 transition-all duration-500">
+                                                <span className="material-icons text-sm">add_circle</span>
+                                            </div>
+                                            <span>Abonar Cuota</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowProjectModal(true)}
+                                            className="h-[54px] px-8 bg-gradient-to-br from-blue-600 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white rounded-2xl text-xs font-display-bold uppercase tracking-[0.15em] flex items-center gap-3 shadow-[0_10px_30px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_35px_rgba(37,99,235,0.4)] transition-all active:scale-95 group"
+                                        >
+                                            <div className="p-2 bg-white/20 rounded-xl group-hover:rotate-12 transition-all">
+                                                <span className="material-icons text-sm">rocket_launch</span>
+                                            </div>
+                                            <span>Lanzar Proyecto</span>
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
@@ -550,12 +629,14 @@ const SpecialQuotas = () => {
                     </div>
                     <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tighter">Sin Iniciativas Activas</h3>
                     <p className="text-slate-500 max-w-md mb-8 font-mono text-sm leading-relaxed">Libro mayor en blanco. Defina un nuevo bloque presupuestario para la Torre {selectedTower} y asocie cuotas de recolección.</p>
-                    <button
-                        onClick={() => setShowProjectModal(true)}
-                        className="px-8 py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-none font-bold uppercase tracking-widest text-xs hover:invert transition-all flex items-center gap-2 border-2 border-transparent"
-                    >
-                        <span className="material-icons text-sm">add</span> Asignar Presupuesto
-                    </button>
+                    {userRole !== 'VISOR' && (
+                        <button
+                            onClick={() => setShowProjectModal(true)}
+                            className="px-8 py-3 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-none font-bold uppercase tracking-widest text-xs hover:invert transition-all flex items-center gap-2 border-2 border-transparent"
+                        >
+                            <span className="material-icons text-sm">add</span> Asignar Presupuesto
+                        </button>
+                    )}
                 </div>
             ) : (
                 <>
@@ -688,7 +769,7 @@ const SpecialQuotas = () => {
                                 <h2 className="text-2xl font-display-black uppercase tracking-tight text-slate-900 dark:text-white">
                                     Control de Cobranza <span className="text-emerald-500">Torre {selectedTower}</span>
                                 </h2>
-                                {project && (
+                                {project && userRole !== 'VISOR' && (
                                     <button
                                         onClick={handleRepairData}
                                         className="ml-4 px-4 py-1.5 text-[9px] font-display-black uppercase tracking-widest border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all rounded-lg active:scale-95 flex items-center gap-2"
@@ -792,7 +873,7 @@ const SpecialQuotas = () => {
                                                                             <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center rounded-2xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-110" title="Tramo Pagado">
                                                                                 <span className="material-icons text-xl">check_circle</span>
                                                                             </div>
-                                                                        ) : (
+                                                                        ) : userRole !== 'VISOR' ? (
                                                                             <button
                                                                                 onClick={(e) => {
                                                                                     e.stopPropagation();
@@ -809,6 +890,10 @@ const SpecialQuotas = () => {
                                                                             >
                                                                                 <span className="material-icons text-xl text-slate-300 group-hover/btn:text-emerald-500 transition-all">add_circle_outline</span>
                                                                             </button>
+                                                                        ) : (
+                                                                            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-300 dark:text-slate-600 flex items-center justify-center rounded-2xl">
+                                                                                <span className="material-icons text-xl">lock</span>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 );
@@ -984,20 +1069,28 @@ const SpecialQuotas = () => {
                                                 </div>
                                             </div>
                                             <div className="col-span-2 flex justify-center gap-2">
-                                                <button
-                                                    onClick={() => openEditModal(exp)}
-                                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/5"
-                                                    title="Editar Egreso"
-                                                >
-                                                    <span className="material-icons text-sm">edit</span>
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteExpense(exp.id)}
-                                                    className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-rose-500/5"
-                                                    title="Eliminar Egreso"
-                                                >
-                                                    <span className="material-icons text-sm">delete</span>
-                                                </button>
+                                                {userRole !== 'VISOR' ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => openEditModal(exp)}
+                                                            className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-emerald-500/5"
+                                                            title="Editar Egreso"
+                                                        >
+                                                            <span className="material-icons text-sm">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteExpense(exp.id)}
+                                                            className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all duration-300 flex items-center justify-center shadow-lg shadow-rose-500/5"
+                                                            title="Eliminar Egreso"
+                                                        >
+                                                            <span className="material-icons text-sm">delete</span>
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-600 flex items-center justify-center">
+                                                        <span className="material-icons text-sm">lock</span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))
@@ -1240,10 +1333,69 @@ const SpecialQuotas = () => {
                                     </div>
                                 </div>
 
+                                {paymentDetails.payment_method === 'TRANSFER' && (
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Evidencia de Pago</label>
+                                        <div className="relative group/capture">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleFileChange}
+                                                className="hidden"
+                                                id="special-capture-upload"
+                                            />
+                                            <label
+                                                htmlFor="special-capture-upload"
+                                                className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-3xl p-6 transition-all cursor-pointer ${previewUrl ? 'border-emerald-500 bg-emerald-500/5 shadow-inner shadow-emerald-500/10' : 'border-slate-200 dark:border-slate-800 hover:border-emerald-500 hover:bg-emerald-500/5'}`}
+                                            >
+                                                {previewUrl ? (
+                                                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-2xl">
+                                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                        <div className="absolute inset-0 bg-emerald-950/40 flex items-center justify-center opacity-0 group-hover/capture:opacity-100 transition-opacity">
+                                                            <span className="text-white text-[10px] font-display-black uppercase tracking-widest">Cambiar Captura</span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 group-hover/capture:scale-110 transition-transform">
+                                                            <span className="material-icons text-xl text-slate-400">upload_file</span>
+                                                        </div>
+                                                        <span className="text-[10px] font-display-black text-slate-400 uppercase tracking-widest mt-3">Subir Referencia Visual</span>
+                                                    </>
+                                                )}
+                                            </label>
+
+                                            {ocrProcessing && (
+                                                <div className="absolute top-4 right-4 bg-white/95 dark:bg-slate-900/95 px-3 py-2 rounded-xl border border-emerald-500/20 shadow-xl flex items-center gap-2 animate-in fade-in zoom-in">
+                                                    <div className="w-3 h-3 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin"></div>
+                                                    <span className="text-[9px] font-display-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">OCR en Proceso</span>
+                                                </div>
+                                            )}
+
+                                            {ocrValidation && !ocrProcessing && (
+                                                <div className={`absolute top-4 right-4 px-3 py-2 rounded-xl shadow-xl flex items-center gap-2 animate-in zoom-in slide-in-from-top-2 border ${ocrValidation.match ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-rose-500 text-white border-rose-400'}`}>
+                                                    <span className="material-icons text-sm">{ocrValidation.match ? 'check_circle' : 'error'}</span>
+                                                    <span className="text-[9px] font-display-black uppercase tracking-widest leading-none">
+                                                        {ocrValidation.match ? 'REF VALIDADA' : 'REF DESCONOCIDA'}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase ml-2">Referencia / Traza</label>
+                                    <div className="flex justify-between items-center ml-2">
+                                        <label className="text-[10px] font-display-black tracking-[0.2em] text-slate-400 uppercase">Referencia / Traza</label>
+                                        {previewUrl && !ocrProcessing && ocrValidation && (
+                                            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[8px] font-display-black uppercase tracking-widest animate-in slide-in-from-right-2 ${ocrValidation.match ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                                                <span className="material-icons text-[10px]">{ocrValidation.match ? 'verified' : 'error'}</span>
+                                                {ocrValidation.match ? 'Validada' : 'No Detectada'}
+                                            </div>
+                                        )}
+                                    </div>
                                     <input
-                                        className="w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-2xl focus:outline-none focus:border-emerald-500 font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300"
+                                        className={`w-full px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border rounded-2xl focus:outline-none font-display-bold text-sm text-slate-900 dark:text-white transition-all uppercase placeholder:text-slate-300 ${previewUrl && ocrValidation ? (ocrValidation.match ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-rose-500 ring-4 ring-rose-500/10') : 'border-slate-200 dark:border-slate-700/50 focus:border-emerald-500'}`}
                                         placeholder="PAGO MÓVIL / EFECTIVO / OTRO"
                                         value={paymentDetails.reference}
                                         onChange={(e) => setPaymentDetails({ ...paymentDetails, reference: e.target.value.toUpperCase() })}
@@ -1423,6 +1575,184 @@ const SpecialQuotas = () => {
                                 className="flex-[2] py-4 bg-gradient-to-r from-rose-500 to-red-600 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40 hover:-translate-y-0.5 transition-all active:scale-95"
                             >
                                 {editingExpenseId ? 'GUARDAR CAMBIOS' : 'REGISTRAR EGRESO'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== HISTORIAL DE PROYECTOS CERRADOS ===== */}
+            {closedProjects.length > 0 && (
+                <div className="mt-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <span className="material-icons text-slate-400 text-2xl">history</span>
+                        <h2 className="text-xl font-display-black text-slate-700 dark:text-slate-300 uppercase tracking-tight">
+                            Historial de Proyectos Cerrados
+                        </h2>
+                        <span className="px-3 py-1 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold">{closedProjects.length}</span>
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        {closedProjects.map(cp => {
+                            const isExpanded = expandedHistoryId === cp.id;
+                            const hd = historyData[cp.id];
+                            const closedDate = cp.closed_at ? new Date(cp.closed_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Fecha no registrada';
+                            const createdDate = new Date(cp.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+                            const hPays = hd?.payments || [];
+                            const hExps = hd?.expenses || [];
+                            const hCollected = hPays.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+                            const hExecuted = hExps.reduce((s, e) => s + parseFloat(e.amount_usd || 0), 0);
+                            const hProgress = cp.total_budget > 0 ? (hCollected / cp.total_budget) * 100 : 0;
+                            return (
+                                <div
+                                    key={cp.id}
+                                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/40 backdrop-blur-sm overflow-hidden shadow-sm hover:shadow-md transition-all"
+                                >
+                                    {/* Card header — siempre visible */}
+                                    <button
+                                        className="w-full flex items-center justify-between p-6 text-left group"
+                                        onClick={() => {
+                                            const next = isExpanded ? null : cp.id;
+                                            setExpandedHistoryId(next);
+                                            if (next) fetchHistoryExpanded(next);
+                                        }}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                <span className="material-icons text-slate-400">folder_zip</span>
+                                            </div>
+                                            <div>
+                                                <p className="font-display-black text-slate-800 dark:text-white text-base uppercase tracking-tight">{cp.name}</p>
+                                                <p className="text-[11px] text-slate-400 font-mono mt-0.5">Torre {cp.tower_id} · Iniciado: {createdDate} · Cerrado: {closedDate}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-right hidden md:block">
+                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest">Presupuesto</p>
+                                                <p className="font-display-black text-slate-800 dark:text-white text-lg">$ {formatNumber(cp.total_budget)}</p>
+                                            </div>
+                                            <div className="w-20 hidden md:block">
+                                                <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, hProgress)}%` }} />
+                                                </div>
+                                                <p className="text-[10px] text-slate-400 mt-1 text-right">{hProgress.toFixed(0)}% recaudado</p>
+                                            </div>
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${isExpanded ? 'bg-emerald-500/10 rotate-180' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                                                <span className={`material-icons text-sm ${isExpanded ? 'text-emerald-500' : 'text-slate-400'}`}>expand_more</span>
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    {/* Detalle expandido — solo lectura */}
+                                    {isExpanded && (
+                                        <div className="border-t border-slate-100 dark:border-slate-800 p-6">
+                                            {!hd ? (
+                                                <div className="flex justify-center py-6">
+                                                    <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    {/* Resumen Financiero */}
+                                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
+                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Resumen Financiero</h4>
+                                                        <div className="space-y-3">
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-slate-500">Presupuesto total</span>
+                                                                <span className="font-bold text-slate-800 dark:text-white">$ {formatNumber(cp.total_budget)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-slate-500">Total recaudado</span>
+                                                                <span className="font-bold text-emerald-600">$ {formatNumber(hCollected)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm">
+                                                                <span className="text-slate-500">Total ejecutado</span>
+                                                                <span className="font-bold text-rose-500">$ {formatNumber(hExecuted)}</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-sm border-t border-slate-200 dark:border-slate-700 pt-2">
+                                                                <span className="text-slate-500">Saldo disponible</span>
+                                                                <span className={`font-bold ${hCollected - hExecuted >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                                                                    $ {formatNumber(hCollected - hExecuted)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {/* Pagos */}
+                                                    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
+                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Pagos Registrados ({hPays.length})</h4>
+                                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                            {hPays.length === 0 ? (
+                                                                <p className="text-slate-400 text-sm text-center py-4">Sin pagos registrados</p>
+                                                            ) : hPays.map(p => (
+                                                                <div key={p.id} className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700 last:border-0">
+                                                                    <div>
+                                                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Cuota #{p.installment_number}</p>
+                                                                        <p className="text-[10px] text-slate-400">{p.reference} · {p.payment_date}</p>
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-emerald-600">$ {formatNumber(p.amount)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {/* Gastos */}
+                                                    <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5">
+                                                        <h4 className="text-xs font-display-black uppercase tracking-widest text-slate-500 mb-4">Egresos del Proyecto ({hExps.length})</h4>
+                                                        <div className="space-y-2 max-h-56 overflow-y-auto">
+                                                            {hExps.length === 0 ? (
+                                                                <p className="text-slate-400 text-sm text-center py-4">Sin egresos registrados</p>
+                                                            ) : hExps.map(e => (
+                                                                <div key={e.id} className="flex justify-between items-center py-2 border-b border-slate-200 dark:border-slate-700 last:border-0">
+                                                                    <div>
+                                                                        <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{e.description}</p>
+                                                                        <p className="text-[10px] text-slate-400">{e.category} · {e.date}</p>
+                                                                    </div>
+                                                                    <span className="text-sm font-bold text-rose-500">$ {formatNumber(e.amount_usd)}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ===== MODAL CONFIRMACIÓN DE CIERRE ===== */}
+            {showCloseConfirmModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                                <span className="material-icons text-amber-500">archive</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-display-black text-slate-900 dark:text-white">Cerrar Proyecto</h3>
+                                <p className="text-xs text-slate-400">Esta acción no se puede deshacer</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">¿Confirmas el cierre del proyecto:</p>
+                        <p className="text-base font-display-black text-slate-900 dark:text-white mb-1 uppercase">{project?.name}</p>
+                        <p className="text-xs text-slate-400 mb-6">Torre {selectedTower} · Presupuesto: $ {formatNumber(project?.total_budget || 0)}</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-xl p-3 mb-6">
+                            ⚠️ El proyecto quedará archivado en el historial y podrás consultar sus datos en modo lectura. Podrás iniciar un nuevo proyecto cuando lo necesites.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowCloseConfirmModal(false)}
+                                className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-display-black text-xs uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleCloseProject}
+                                disabled={isMutating}
+                                className="flex-[2] py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-display-black text-xs uppercase tracking-wider hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                <span className="material-icons text-sm">archive</span>
+                                {isMutating ? 'Archivando...' : 'Confirmar Cierre'}
                             </button>
                         </div>
                     </div>

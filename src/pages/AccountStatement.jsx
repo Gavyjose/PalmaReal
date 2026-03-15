@@ -404,7 +404,7 @@ const AccountStatement = () => {
         }
 
         try {
-            setLoading(true);
+            setIsMutating(true);
             for (const m of allMatches) {
                 // Update bank side
                 await supabase
@@ -696,16 +696,16 @@ const AccountStatement = () => {
                                             {tx.date ? new Date(tx.date + 'T12:00:00').toLocaleDateString('es-VE') : '-'}
                                         </td>
                                         <td className="px-3 py-3">
+                                            <span className="text-xs font-black text-slate-800 dark:text-white uppercase truncate max-w-[200px]" title={tx.description}>
+                                                {tx.description}
+                                            </span>
+                                        </td>
+                                        <td className="px-3 py-3">
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-black text-slate-800 dark:text-white uppercase truncate max-w-[200px]" title={tx.description}>
-                                                    {tx.description}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">REF: {tx.ref}</span>
-                                                    {tx.match_type === 'AMOUNT' && (
-                                                        <span className="text-[9px] bg-amber-50 text-amber-600 px-1 rounded font-black border border-amber-100 uppercase" title="Emparejado por Monto y Fecha proximity">Fuzzy Match</span>
-                                                    )}
-                                                </div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">REF: {tx.ref}</span>
+                                                {tx.match_type === 'AMOUNT' && (
+                                                    <span className="text-[9px] bg-amber-50 text-amber-600 px-1 rounded font-black border border-amber-100 uppercase inline-block max-w-fit" title="Emparejado por Monto y Fecha proximity">Fuzzy Match</span>
+                                                )}
                                             </div>
                                         </td>
                                         <td className={`px-3 py-3 text-right font-bold tabular-nums text-xs ${tx.amount_bs >= 0 ? 'text-emerald-500' : 'text-red-500'

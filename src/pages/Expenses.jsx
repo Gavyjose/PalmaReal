@@ -4,9 +4,12 @@ import { useTowers } from '../hooks/useTowers';
 import { BUILDING_CONFIG } from '../config/buildingConfig';
 import { formatCurrency, formatNumber } from '../utils/formatters';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+const PrintPreview = React.lazy(() => import('../components/PrintPreview'));
 
 const Expenses = () => {
     const { activeTowers, loading: towersLoading, lastSelectedTower, setLastSelectedTower } = useTowers();
+    const { role } = useAuth();
     const [selectedTower, setSelectedTower] = useState(lastSelectedTower || '');
     const currentMonth = ["ENERO", "FEBRERO", "MARZO", "ABRIL", "MAYO", "JUNIO", "JULIO", "AGOSTO", "SEPTIEMBRE", "OCTUBRE", "NOVIEMBRE", "DICIEMBRE"][new Date().getMonth()];
     const currentYear = new Date().getFullYear();
@@ -17,6 +20,7 @@ const Expenses = () => {
     const [periodStatus, setPeriodStatus] = useState('BORRADOR');
     const [consolidatedData, setConsolidatedData] = useState(null);
     const [bcvRate, setBcvRate] = useState(0);
+    const [showPrintPreview, setShowPrintPreview] = useState(false);
 
     // Set initial tower when towers load
     useEffect(() => {
@@ -40,15 +44,36 @@ const Expenses = () => {
             const firstDay = `${pYear}-${String(monthIndex + 1).padStart(2, '0')}-01`;
             const lastDay = new Date(parseInt(pYear), monthIndex + 1, 0).toISOString().split('T')[0];
 
-            // 1. Fetch Period and Expenses
-            const { data: periodData, error: periodError } = await supabase
+            // 1. Start parallel fetches
+            const periodPromise = supabase
                 .from('condo_periods')
                 .select('*')
                 .eq('tower_id', selectedTower)
                 .eq('period_name', period.toUpperCase())
                 .maybeSingle();
 
-            if (periodError) throw periodError;
+            const bankPromise = supabase
+                .from('bank_transactions')
+                .select('amount, description')
+                .gte('transaction_date', firstDay)
+                .lte('transaction_date', lastDay);
+
+            const bcvPromise = supabase
+                .from('exchange_rates')
+                .select('rate_value')
+                .lte('rate_date', firstDay)
+                .order('rate_date', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            const [periodRes, bankRes, bcvRes] = await Promise.all([periodPromise, bankPromise, bcvPromise]);
+
+            if (periodRes.error) throw periodRes.error;
+            if (bankRes.error) console.error('Error fetching bank commissions:', bankRes.error);
+
+            const periodData = periodRes.data;
+            const bankTransactions = bankRes.data;
+            const bcvDayOne = bcvRes.data;
 
             let dbExpenses = [];
             if (periodData) {
@@ -61,6 +86,7 @@ const Expenses = () => {
                     unit_aliquot_usd: periodData.unit_aliquot_usd
                 });
                 setBcvRate(parseFloat(periodData.bcv_rate));
+
                 const { data: expensesData, error: expError } = await supabase
                     .from('period_expenses')
                     .select('*')
@@ -75,37 +101,18 @@ const Expenses = () => {
                 setConsolidatedData(null);
             }
 
-            // 2. Fetch Bank Commissions (Virtual Item)
             const COMMISSION_KEYWORDS = ['COMISION', 'COMIS.', 'MANTENIMIENTO DE CUENTA', 'USO DEL CANAL', 'SMS', 'ITF', 'GASTOS ADMINISTRATIVOS', 'CARGO POR MANTENIMIENTO', 'BANCAREA', 'BANCARIA'];
-            const { data: bankTransactions, error: bankError } = await supabase
-                .from('bank_transactions')
-                .select('amount, description')
-                .gte('transaction_date', firstDay)
-                .lte('transaction_date', lastDay);
-
-            if (bankError) console.error('Error fetching bank commissions:', bankError);
-
-            const totalCommissionsBs = (bankTransactions || [])
-                .filter(tx => {
-                    const desc = (tx.description || '').toUpperCase();
-                    return tx.amount < 0 && COMMISSION_KEYWORDS.some(kw => desc.includes(kw));
-                })
-                .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
-
-            // 3. Fetch BCV Rate for the 1st of the month
-            const { data: bcvDayOne, error: bcvError } = await supabase
-                .from('exchange_rates')
-                .select('rate_value')
-                .lte('rate_date', firstDay)
-                .order('rate_date', { ascending: false })
-                .limit(1)
-                .maybeSingle();
 
             const rateDayOne = bcvDayOne?.rate_value || bcvRate || 1;
 
             // 4. Merge Virtual Item: Comisión Bancaria
             // Improved search: normalizamos para ignorar acentos y mayúsculas
             const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
+            // Calcular comisiones bancarias desde las transacciones del mes
+            const totalCommissionsBs = (bankTransactions || [])
+                .filter(t => COMMISSION_KEYWORDS.some(kw => normalize(t.description || '').includes(normalize(kw))))
+                .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
 
             const existingCommIndex = dbExpenses.findIndex(e => {
                 const desc = normalize(e.description);
@@ -235,14 +242,14 @@ const Expenses = () => {
                             </div>
                         </div>
 
-                        {consolidatedData?.reserve_fund_usd > 0 && (
+                        {consolidatedData?.reserve_fund_usd > 0 ? (
                             <div className="flex items-center gap-2 px-2">
                                 <span className="material-icons text-slate-400 text-sm">account_balance</span>
                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
                                     Fondo Reserva: $ {formatCurrency(consolidatedData.reserve_fund_usd)}
                                 </span>
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </div>
             </div>
@@ -313,11 +320,11 @@ const Expenses = () => {
                             <div className={`w-14 h-14 ${kpi.bg} rounded-2xl flex items-center justify-center text-slate-900 dark:text-white group-hover:scale-110 transition-transform`}>
                                 <span className={`material-icons text-2xl ${kpi.color.replace('bg-', 'text-')}`}>{kpi.icon}</span>
                             </div>
-                            {kpi.progress !== undefined && (
+                            {kpi.progress !== undefined ? (
                                 <div className="w-24 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                     <div className={`${kpi.color} h-full transition-all duration-1000`} style={{ width: `${kpi.progress}%` }}></div>
                                 </div>
-                            )}
+                            ) : null}
                         </div>
                         <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">{kpi.label}</h3>
                         <p className="text-4xl font-display-bold text-slate-900 dark:text-white tracking-tight">{kpi.value}</p>
@@ -336,13 +343,21 @@ const Expenses = () => {
                         </div>
                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest pl-4">Torre {selectedTower} · {period}</p>
                     </div>
-                    <Link
-                        to="/admin/alicuotas"
-                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95 transition-all flex items-center gap-3"
+                    {role !== 'VISOR' && (
+                        <Link
+                            to="/admin/alicuotas"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95 transition-all flex items-center gap-3"
+                        >
+                            Parametrizar Mes
+                        </Link>
+                    )}
+                    <button
+                        onClick={() => setShowPrintPreview(true)}
+                        className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] hover:shadow-xl hover:shadow-black/30 active:scale-95 transition-all flex items-center gap-3"
                     >
-                        <span className="material-icons text-base">tune</span>
-                        Parametrizar Mes
-                    </Link>
+                        <span className="material-icons text-base">picture_as_pdf</span>
+                        Generar PDF
+                    </button>
                 </div>
 
                 <div className="max-h-[600px] overflow-y-auto overflow-x-auto custom-scrollbar relative">
@@ -371,13 +386,15 @@ const Expenses = () => {
                                                 <p className="text-slate-500 font-display-bold uppercase tracking-[0.15em] text-sm">Sin recibo proyectado</p>
                                                 <p className="text-slate-400 text-xs mt-2 max-w-xs mx-auto">No se han parametrizado los gastos para esta torre y periodo seleccionado.</p>
                                             </div>
-                                            <Link
-                                                to="/admin/alicuotas"
-                                                className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-600 transition-all flex items-center gap-3 shadow-sm"
-                                            >
-                                                <span className="material-icons text-base">add</span>
-                                                Inicializar Periodo
-                                            </Link>
+                                            {role !== 'VISOR' ? (
+                                                <Link
+                                                    to="/admin/alicuotas"
+                                                    className="px-8 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-600 transition-all flex items-center gap-3 shadow-sm"
+                                                >
+                                                    <span className="material-icons text-base">add</span>
+                                                    Inicializar Periodo
+                                                </Link>
+                                            ) : null}
                                         </div>
                                     </td>
                                 </tr>
@@ -419,7 +436,7 @@ const Expenses = () => {
                                 ))
                             )}
                         </tbody>
-                        {!loading && expenses.length > 0 && (
+                        {!loading && expenses.length > 0 ? (
                             <tfoot className="sticky bottom-0 z-20 bg-slate-900 dark:bg-black text-white/90 shadow-[0_-10px_30px_rgba(0,0,0,0.3)]">
                                 <tr className="font-black text-[10px] uppercase tracking-[0.15em]">
                                     <td className="px-10 py-8 border-r border-white/5">TOTAL ACUMULADO</td>
@@ -444,7 +461,7 @@ const Expenses = () => {
                                     </td>
                                 </tr>
                             </tfoot>
-                        )}
+                        ) : null}
                     </table>
                 </div>
             </div>
@@ -543,6 +560,22 @@ const Expenses = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Print Preview Modal */}
+            <PrintPreview
+                isOpen={showPrintPreview}
+                onClose={() => setShowPrintPreview(false)}
+                type="gastos_reales"
+                data={{
+                    selectedTower,
+                    period,
+                    expenses,
+                    finalTotal: consolidatedData?.total_expenses_usd ?? stats.total,
+                    totalPaidUsd: stats.totalPaidUsd,
+                    aliquotPerUnit: consolidatedData?.unit_aliquot_usd ?? (stats.total / 16),
+                    reserveFundAmount: consolidatedData?.reserve_fund_usd ?? 0
+                }}
+            />
         </div>
     );
 };

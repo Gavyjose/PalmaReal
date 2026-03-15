@@ -31,8 +31,8 @@ const BCV_CHANNEL = 'DolarOficialBCV';
 // ── Parsing del texto OCR ─────────────────────────────────────────────────────
 function parseTextBCV(text) {
     const valorMatch =
-        text.match(/USD\s+([\d,.]+)/i) ||
-        text.match(/Bs\s*\/\s*USD\s+([\d,.]+)/i);
+        text.match(/USD[^\d,.]*([\d,.]+)/i) ||
+        text.match(/Bs\s*\/\s*USD[^\d,.]*([\d,.]+)/i);
 
     let valor = null;
     if (valorMatch?.[1]) {
@@ -90,20 +90,21 @@ async function loadHistory() {
             const { fecha, valor } = parseTextBCV(text);
             if (!fecha || !valor) { skipped++; continue; }
 
+            const roundedValor = Math.round(valor * 100) / 100;
             const { error } = await supabase
                 .from('exchange_rates')
                 .upsert({
                     rate_date: fecha,
-                    rate_value: valor,
+                    rate_value: roundedValor,
                     provider: 'BCV',
                     metadata: { msg_id: msg.id }
                 }, { onConflict: 'rate_date,provider' });
 
             if (error) {
-                console.error(`  ❌ [${fecha}] Bs. ${valor} — ${error.message}`);
+                console.error(`  ❌ [${fecha}] Bs. ${roundedValor} (Original: ${valor}) — ${error.message}`);
                 failed++;
             } else {
-                console.log(`  ✅ [${fecha}] Bs. ${valor}`);
+                console.log(`  ✅ [${fecha}] Bs. ${roundedValor} (Original: ${valor})`);
                 saved++;
             }
         }

@@ -71,26 +71,19 @@ const fetchFinancialData = async ([, tower, unitId, initialDebtValue]) => {
         });
     }
 
-    // 3. Fetch special projects
+    // 3. Fetch special projects (only ACTIVE for charges)
     const { data: specialProjects } = await supabase
         .from('special_quota_projects')
         .select('*')
         .eq('tower_id', normalizedTower)
         .eq('status', 'ACTIVE');
 
-    let allSpecialPayments = [];
-    if (specialProjects && specialProjects.length > 0) {
-        for (const proj of specialProjects) {
-            const { data: sPayments } = await supabase
-                .from('special_quota_payments')
-                .select('*')
-                .eq('project_id', proj.id)
-                .eq('unit_id', unitId);
-            if (sPayments) {
-                allSpecialPayments.push(...sPayments);
-            }
-        }
-    }
+    // Fetch ALL special payments for this unit (including from closed projects)
+    // so they are correctly deducted from the common pool.
+    const { data: allSpecialPayments } = await supabase
+        .from('special_quota_payments')
+        .select('*')
+        .eq('unit_id', unitId);
 
     // 4. Fetch All Payments for History
     const { data: paymentsHistory, error: paymentsError } = await supabase

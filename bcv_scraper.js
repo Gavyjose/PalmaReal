@@ -22,7 +22,7 @@ async function parseTextBCV(text) {
     try {
         console.log("Parsing text...");
         // Regex for value
-        const valorMatch = text.match(/USD\s+([\d,.]+)/i) || text.match(/Bs\s*\/\s*USD\s+([\d,.]+)/i);
+        const valorMatch = text.match(/USD[^\d,.]*([\d,.]+)/i) || text.match(/Bs\s*\/\s*USD[^\d,.]*([\d,.]+)/i);
         let valor = null;
         if (valorMatch && valorMatch[1]) {
             valor = parseFloat(valorMatch[1].replace(',', '.'));
@@ -88,12 +88,13 @@ async function runScraper() {
             const { fecha, valor } = await parseTextBCV(text);
 
             if (fecha && valor) {
-                console.log(`[ID:${msg.id}] Found rate: ${valor} for date: ${fecha}`);
+                const roundedValor = Math.round(valor * 100) / 100;
+                console.log(`[ID:${msg.id}] Found rate: ${valor} (Rounded to ${roundedValor}) for date: ${fecha}`);
                 const { error } = await supabase
                     .from('exchange_rates')
                     .upsert({
                         rate_date: fecha,
-                        rate_value: valor,
+                        rate_value: roundedValor,
                         metadata: { raw_text: text, msg_id: msg.id }
                     }, { onConflict: 'rate_date,provider' });
 

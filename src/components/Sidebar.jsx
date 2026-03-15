@@ -17,6 +17,8 @@ const sidebarLinks = [
     { icon: 'assignment', label: 'Cuotas Especiales', to: '/admin/cuotas-especiales', key: 'cuotas_especiales' },
     { icon: 'people', label: 'Propietarios', to: '/admin/propietarios', key: 'propietarios' },
     { icon: 'settings', label: 'Configuración', to: '/admin/configuracion', key: 'configuracion' },
+    { separator: true },
+    { icon: 'cottage', label: 'Vista Propietario', to: '/portal', key: 'portal_propietario' },
 ];
 
 const Sidebar = () => {
@@ -44,8 +46,9 @@ const Sidebar = () => {
     // Filtrar links basados en permisos
     const filteredLinks = sidebarLinks.filter(link => {
         if (isMaster) return true;
-        // Dashboard siempre visible
-        if (link.key === 'dashboard') return true;
+        // Dashboard y Separador siempre visibles
+        if (link.key === 'dashboard' || link.separator) return true;
+        
         // Configuración solo para MASTER
         if (link.key === 'configuracion') return false;
 
@@ -79,40 +82,47 @@ const Sidebar = () => {
 
             {/* Navigation Menu */}
             <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto custom-scrollbar scroll-smooth">
-                {filteredLinks.map((link) => (
-                    <NavLink
-                        key={link.to}
-                        to={link.to}
-                        end={link.end}
-                        title={isCollapsed ? link.label : ""}
-                        className={({ isActive }) =>
-                            `flex items-center gap-4 px-4 py-3.5 text-sm font-bold rounded-[1.75rem] transition-all duration-300 group relative overflow-hidden ${isActive
-                                ? 'bg-gradient-to-r from-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400'
-                                : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200'
-                            }`
-                        }
-                    >
-                        {({ isActive }) => (
-                            <>
-                                <span className={`material-icons transition-all duration-300 relative z-10 ${isActive
-                                    ? 'scale-110 text-emerald-500 drop-shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-                                    : 'group-hover:scale-110 group-hover:text-emerald-500'}`}>
-                                    {link.icon}
-                                </span>
-                                {!isCollapsed && (
-                                    <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300 relative z-10">{link.label}</span>
-                                )}
+                {filteredLinks.map((link, index) => {
+                    if (link.separator) {
+                        return (
+                            <div key={`sep-${index}`} className="my-4 border-t border-slate-200/50 dark:border-slate-800/50 mx-4"></div>
+                        );
+                    }
+                    return (
+                        <NavLink
+                            key={link.to}
+                            to={link.to}
+                            end={link.end}
+                            title={isCollapsed ? link.label : ""}
+                            className={({ isActive }) =>
+                                `flex items-center gap-4 px-4 py-3.5 text-sm font-bold rounded-[1.75rem] transition-all duration-300 group relative overflow-hidden ${isActive
+                                    ? 'bg-gradient-to-r from-emerald-500/10 to-transparent text-emerald-600 dark:text-emerald-400'
+                                    : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-slate-200'
+                                }`
+                            }
+                        >
+                            {({ isActive }) => (
+                                <>
+                                    <span className={`material-icons transition-all duration-300 relative z-10 ${isActive
+                                        ? 'scale-110 text-emerald-500 drop-shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                                        : 'group-hover:scale-110 group-hover:text-emerald-500'}`}>
+                                        {link.icon}
+                                    </span>
+                                    {!isCollapsed && (
+                                        <span className="whitespace-nowrap animate-in fade-in slide-in-from-left-2 duration-300 relative z-10">{link.label}</span>
+                                    )}
 
-                                {isActive && (
-                                    <>
-                                        <div className="absolute left-0 w-1.5 h-7 bg-emerald-500 rounded-r-full shadow-[2px_0_12px_rgba(16,185,129,0.4)] animate-in slide-in-from-left-full duration-500"></div>
-                                        <div className="absolute inset-0 bg-emerald-500/5 dark:bg-emerald-500/10 backdrop-blur-sm animate-in fade-in duration-700"></div>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </NavLink>
-                ))}
+                                    {isActive && (
+                                        <>
+                                            <div className="absolute left-0 w-1.5 h-7 bg-emerald-500 rounded-r-full shadow-[2px_0_12px_rgba(16,185,129,0.4)] animate-in slide-in-from-left-full duration-500"></div>
+                                            <div className="absolute inset-0 bg-emerald-500/5 dark:bg-emerald-500/10 backdrop-blur-sm animate-in fade-in duration-700"></div>
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </NavLink>
+                    );
+                })}
             </nav>
 
             {/* User Profile Section */}

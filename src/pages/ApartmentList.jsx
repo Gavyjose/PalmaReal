@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import useSWR from 'swr';
 import { supabase } from '../supabase';
 import { useTowers } from '../hooks/useTowers';
+import { useAuth } from '../context/AuthContext';
 import { sortUnits } from '../utils/unitSort';
 
 const fetchDirectoryData = async () => {
@@ -17,6 +18,7 @@ const fetchDirectoryData = async () => {
 };
 
 const ApartmentList = () => {
+    const { userRole } = useAuth();
     const [showModal, setShowModal] = useState(false);
 
     // Form State
@@ -195,26 +197,30 @@ const ApartmentList = () => {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setShowTowerModal(true)}
-                            className="group relative px-6 py-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 text-slate-900 dark:text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all active:scale-95 flex items-center gap-2"
-                        >
-                            <span className="material-icons text-lg">settings</span>
-                            <span>Torres</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                setEditingId(null);
-                                setTower(selectedTower);
-                                setFloor('PB');
-                                setNumber('');
-                                setShowModal(true);
-                            }}
-                            className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
-                        >
-                            <span className="material-icons text-lg">add_location</span>
-                            <span>Nueva Unidad</span>
-                        </button>
+                        {userRole !== 'VISOR' && (
+                            <>
+                                <button
+                                    onClick={() => setShowTowerModal(true)}
+                                    className="group relative px-6 py-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 text-slate-900 dark:text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-500 hover:text-white transition-all active:scale-95 flex items-center gap-2"
+                                >
+                                    <span className="material-icons text-lg">settings</span>
+                                    <span>Torres</span>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setEditingId(null);
+                                        setTower(selectedTower);
+                                        setFloor('PB');
+                                        setNumber('');
+                                        setShowModal(true);
+                                    }}
+                                    className="group relative px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-2xl font-display-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-3"
+                                >
+                                    <span className="material-icons text-lg">add_location</span>
+                                    <span>Nueva Unidad</span>
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
                 {/* Decorative background element */}
@@ -305,28 +311,36 @@ const ApartmentList = () => {
 
                                     {/* Premium Action Menu */}
                                     <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                handleEditUnit(unit);
-                                            }}
-                                            className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-lg active:scale-90"
-                                            title="Editar"
-                                        >
-                                            <span className="material-icons text-sm">edit</span>
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                if (confirm('¿ELIMINAR UNIDAD?')) handleDeleteUnit(unit.id);
-                                            }}
-                                            className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-lg active:scale-90"
-                                            title="Eliminar"
-                                        >
-                                            <span className="material-icons text-sm">delete</span>
-                                        </button>
+                                        {userRole !== 'VISOR' ? (
+                                            <>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        handleEditUnit(unit);
+                                                    }}
+                                                    className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition-all shadow-lg active:scale-90"
+                                                    title="Editar"
+                                                >
+                                                    <span className="material-icons text-sm">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        if (confirm('¿ELIMINAR UNIDAD?')) handleDeleteUnit(unit.id);
+                                                    }}
+                                                    className="w-8 h-8 rounded-xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-white/20 dark:border-white/10 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all shadow-lg active:scale-90"
+                                                    title="Eliminar"
+                                                >
+                                                    <span className="material-icons text-sm">delete</span>
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white/40">
+                                                <span className="material-icons text-sm">lock</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}

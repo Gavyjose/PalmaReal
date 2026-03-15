@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { formatCurrency, formatNumber } from '../utils/formatters';
+import { ocrService } from '../utils/ocrService';
+import { usePaymentOcr } from '../hooks/usePaymentOcr';
 
 const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) => {
     const [selectedPeriods, setSelectedPeriods] = useState([]);
@@ -11,8 +13,18 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
     const [loadingRate, setLoadingRate] = useState(false);
     const [saving, setSaving] = useState(false);
     const [isEditingRate, setIsEditingRate] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState('TRANSFER'); // 'TRANSFER' or 'CASH'
     const [cashAmountUsd, setCashAmountUsd] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('TRANSFER');
+
+    const {
+        file,
+        previewUrl,
+        ocrProcessing,
+        ocrValidation,
+        handleFileChange,
+        resetOcr,
+        uploadReceipt
+    } = usePaymentOcr(reference);
 
     // Cargar tasa BCV para la fecha seleccionada usando la función SQL
     const fetchRateForDate = async (date) => {
@@ -68,8 +80,16 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
             return;
         }
 
+        // Validación de OCR si hay archivo cargado
+        if (ocrValidation && !ocrValidation.match) {
+            const confirmed = window.confirm('Los últimos 6 dígitos de la referencia no coinciden con la captura. ¿Deseas liquidar de todos modos?');
+            if (!confirmed) return;
+        }
+
         try {
             setSaving(true);
+
+            let receiptUrl = await uploadReceipt('payment-captures', unit.id);
 
             // 1. Insertar Cabezal del Pago
             const paymentData = {
@@ -79,7 +99,8 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
                 amount_usd: amountUsd,
                 bcv_rate: paymentMethod === 'TRANSFER' ? bcvRate : null,
                 reference: reference.toUpperCase(),
-                payment_method: paymentMethod
+                payment_method: paymentMethod,
+                receipt_url: receiptUrl
             };
 
             console.log('Intentando guardar pago:', paymentData);
@@ -410,15 +431,73 @@ const QuotaPaymentModal = ({ isOpen, onClose, pendingPeriods, unit, onSubmit }) 
                             </div>
                         )}
 
+                        {/* Carga de Comprobante */}
+                        {paymentMethod === 'TRANSFER' && (
+                            <div>
+                                <label className="block text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest mb-1">Evidencia de Pago (Captura)</label>
+                                <div className="relative group/capture">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                        id="modal-capture-upload"
+                                    />
+                                    <label
+                                        htmlFor="modal-capture-upload"
+                                        className={`w-full flex flex-col items-center justify-center border-2 border-dashed rounded-none p-4 transition-all cursor-pointer ${previewUrl ? 'border-slate-900 bg-slate-50 dark:border-white dark:bg-slate-800' : 'border-slate-300 dark:border-slate-700 hover:border-slate-900 dark:hover:border-white'}`}
+                                    >
+                                        {previewUrl ? (
+                                            <div className="relative w-full aspect-video overflow-hidden">
+                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/capture:opacity-100 transition-opacity">
+                                                    <span className="text-white text-[10px] font-mono font-black uppercase tracking-widest">Cambiar</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="material-icons text-2xl text-slate-300 mb-1">add_a_photo</span>
+                                                <span className="text-[9px] font-mono font-bold text-slate-400 uppercase tracking-widest text-center">Digitalizar Comprobante</span>
+                                            </>
+                                        )}
+                                    </label>
+
+                                    {ocrProcessing && (
+                                        <div className="absolute top-2 right-2 bg-white/95 dark:bg-slate-900/95 p-1.5 border border-slate-900 dark:border-white flex items-center gap-2 animate-in fade-in">
+                                            <div className="w-2.5 h-2.5 border-2 border-slate-900/20 dark:border-white/20 border-t-slate-900 dark:border-white rounded-full animate-spin"></div>
+                                            <span className="text-[8px] font-mono font-black text-slate-900 dark:text-white uppercase tracking-widest">OCR</span>
+                                        </div>
+                                    )}
+
+                                    {ocrValidation && !ocrProcessing && (
+                                        <div className={`absolute top-2 right-2 p-1.5 border flex items-center gap-2 animate-in zoom-in ${ocrValidation.match ? 'bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white' : 'bg-red-600 text-white border-red-600'}`}>
+                                            <span className="material-icons text-xs">{ocrValidation.match ? 'check' : 'priority_high'}</span>
+                                            <span className="text-[8px] font-mono font-black uppercase tracking-widest">
+                                                {ocrValidation.match ? 'VALIDADO' : 'ERROR REF'}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Referencia */}
                         <div>
-                            <label className="block text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest mb-1">Traza de Auditoría (Referencia)</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="text-[10px] font-mono font-black text-slate-500 uppercase tracking-widest">Traza de Auditoría (Referencia)</label>
+                                {previewUrl && !ocrProcessing && ocrValidation && (
+                                    <div className={`flex items-center gap-1.5 px-2 py-0.5 border text-[8px] font-mono font-black uppercase tracking-widest animate-in slide-in-from-right-2 ${ocrValidation.match ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`}>
+                                        <span className="material-icons text-[10px]">{ocrValidation.match ? 'verified' : 'error'}</span>
+                                        {ocrValidation.match ? 'Referencia Validada' : 'Referencia No Detectada'}
+                                    </div>
+                                )}
+                            </div>
                             <input
                                 type="text"
                                 placeholder={paymentMethod === 'CASH' ? "EFECTIVO ENTREGADO" : "EJ: 12345678"}
                                 value={reference}
                                 onChange={(e) => setReference(e.target.value)}
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-none px-4 py-3 font-mono font-bold text-slate-900 dark:text-white outline-none focus:border-slate-900 dark:focus:border-white transition-colors uppercase placeholder:normal-case tracking-widest"
+                                className={`w-full bg-white dark:bg-slate-900 border rounded-none px-4 py-3 font-mono font-bold text-slate-900 dark:text-white outline-none transition-colors uppercase placeholder:normal-case tracking-widest ${previewUrl && ocrValidation ? (ocrValidation.match ? 'border-emerald-500 ring-4 ring-emerald-500/5' : 'border-rose-500 ring-4 ring-rose-500/5') : 'border-slate-300 dark:border-slate-700 focus:border-slate-900 dark:focus:border-white'}`}
                             />
                         </div>
 

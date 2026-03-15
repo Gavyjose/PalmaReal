@@ -25,10 +25,34 @@ const CashBook = lazy(() => import('./pages/CashBook'));
 // Lazy-loaded Owner Pages
 const OwnerPortal = lazy(() => import('./pages/OwnerPortal'));
 const OwnerAccountStatement = lazy(() => import('./pages/OwnerAccountStatement'));
+const SolvencyCertificate = lazy(() => import('./pages/SolvencyCertificate'));
 
 // Lazy-loaded Auth Pages
 const Login = lazy(() => import('./pages/Login'));
 const PasswordRecovery = lazy(() => import('./pages/PasswordRecovery'));
+
+import { useAuth } from './context/AuthContext';
+
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, role, loading } = useAuth();
+
+  if (loading) return <PageLoader />;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    // If user is logged in but doesn't have the role, redirect based on their actual role
+    if (role === 'PROPIETARIO') {
+      return <Navigate to="/portal" replace />;
+    }
+    return <Navigate to="/admin" replace />;
+  }
+
+  return children;
+};
 
 // Loading Fallback UI
 const PageLoader = () => (
@@ -39,6 +63,7 @@ const PageLoader = () => (
 );
 
 function App() {
+  console.log('App: Rendering components...');
   return (
     <BrowserRouter>
       <AuthProvider>
@@ -50,7 +75,14 @@ function App() {
               <Route path="/" element={<Navigate to="/login" replace />} />
             </Route>
 
-            <Route path="/admin" element={<DashboardLayout />}>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['MASTER', 'OPERADOR', 'VISOR']}>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<AdminDashboard />} />
               <Route path="pagos" element={<Expenses />} />
               <Route path="alicuotas" element={<AliquotsConfig />} />
@@ -67,11 +99,31 @@ function App() {
               <Route path="libro-caja" element={<CashBook />} />
             </Route>
 
-            <Route path="/portal" element={<OwnerLayout />}>
+            <Route
+              path="/portal"
+              element={
+                <ProtectedRoute allowedRoles={['MASTER', 'OPERADOR', 'VISOR', 'PROPIETARIO']}>
+                  <OwnerLayout />
+                </ProtectedRoute>
+              }
+            >
               <Route index element={<OwnerPortal />} />
               <Route path="estado-de-cuenta" element={<OwnerAccountStatement />} />
+              <Route path="documentos" element={<OwnerPortal />} />
+              <Route path="comunicados" element={<OwnerPortal />} />
+              <Route path="configuracion" element={<OwnerPortal />} />
               <Route path="cuenta" element={<OwnerPortal />} />
             </Route>
+
+            {/* Print Route (No Layout) */}
+            <Route
+              path="/constancia/:unitId"
+              element={
+                <ProtectedRoute allowedRoles={['MASTER', 'OPERADOR', 'VISOR', 'PROPIETARIO']}>
+                  <SolvencyCertificate />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Suspense>
       </AuthProvider>

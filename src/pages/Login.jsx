@@ -7,6 +7,7 @@ const Login = () => {
     const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -15,12 +16,15 @@ const Login = () => {
         try {
             setError('');
             setLoading(true);
+            console.log('Login: Llamando a signIn con', email);
             await signIn(email, password);
+            console.log('Login: signIn completado con éxito. Navegando a /admin...');
             navigate('/admin');
         } catch (error) {
+            console.error('Login Error Capturado:', error);
             setError('Error al iniciar sesión. Verifica tus credenciales.');
-            console.error(error);
         } finally {
+            console.log('Login: finally - ejecutando setLoading(false)');
             setLoading(false);
         }
     };
@@ -80,17 +84,23 @@ const Login = () => {
                                 <span className="material-icons text-slate-500 text-lg group-focus-within:text-primary">lock</span>
                             </div>
                             <input
-                                className="block w-full pl-10 pr-10 py-3 bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
+                                className="block w-full pl-10 pr-10 py-3 bg-slate-900/50 border border-slate-700 text-white placeholder-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm normal-case"
                                 id="password"
                                 name="password"
                                 placeholder="••••••••"
                                 required
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
-                            <button className="absolute inset-y-0 right-0 pr-3 flex items-center" type="button">
-                                <span className="material-icons text-slate-500 hover:text-slate-300 text-lg cursor-pointer">visibility</span>
+                            <button
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                <span className="material-icons text-slate-500 hover:text-slate-300 text-lg cursor-pointer">
+                                    {showPassword ? 'visibility_off' : 'visibility'}
+                                </span>
                             </button>
                         </div>
                     </div>
